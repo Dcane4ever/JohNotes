@@ -202,11 +202,11 @@ export default function Notebook() {
       </div>
 
       {/* Editor */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         {activeNote ? (
           <NoteEditor key={activeNote.id} note={activeNote} onSave={onNoteSaved} />
         ) : (
-          <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: '#4b5563' }}>
+          <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: '#4b5563' }}>
             <ChevronRight size={32} />
             <p style={{ fontSize: '14px' }}>{activeSubject ? 'Select or create a note' : 'Select a subject to start'}</p>
           </div>
