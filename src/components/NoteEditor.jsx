@@ -135,8 +135,10 @@ const editorCSS = `
 .tiptap { outline: none; font-size: 15px; line-height: 1.7; color: #d1d5db; min-height: 300px; }
 .tiptap p { margin: 0 0 8px; }
 .tiptap h2 { font-size: 20px; font-weight: 600; color: #e2e2e7; margin: 20px 0 8px; }
-.tiptap ul, .tiptap ol { padding-left: 20px; margin: 0 0 8px; }
+.tiptap ul { padding-left: 20px; margin: 0 0 8px; list-style-type: disc; }
+.tiptap ol { padding-left: 20px; margin: 0 0 8px; list-style-type: decimal; }
 .tiptap li { margin-bottom: 4px; }
+.tiptap ul li::marker, .tiptap ol li::marker { color: #9ca3af; }
 .tiptap strong { color: #e2e2e7; }
 .tiptap p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: #4b5563; pointer-events: none; float: left; height: 0; }
 .tiptap ul[data-type="taskList"] { list-style: none; padding-left: 0; }
