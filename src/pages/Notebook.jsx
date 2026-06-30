@@ -86,7 +86,7 @@ export default function Notebook() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' }}>
 
       {/* Subjects panel */}
       <div style={{
@@ -206,7 +206,7 @@ export default function Notebook() {
         {activeNote ? (
           <NoteEditor key={activeNote.id} note={activeNote} onSave={onNoteSaved} />
         ) : (
-          <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: '#4b5563' }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: '#4b5563', pointerEvents: 'none', zIndex: 0 }}>
             <ChevronRight size={32} />
             <p style={{ fontSize: '14px' }}>{activeSubject ? 'Select or create a note' : 'Select a subject to start'}</p>
           </div>
