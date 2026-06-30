@@ -17,3 +17,26 @@ body {
   min-height: 100vh;
   display: flex;
 }
+
+/* Mobile: hide sidebar, stack layout */
+@media (max-width: 768px) {
+  aside {
+    width: 100% !important;
+    min-height: auto !important;
+    flex-direction: row !important;
+    padding: 12px !important;
+    gap: 8px !important;
+    flex-wrap: wrap;
+    position: sticky !important;
+    top: 0;
+    z-index: 10;
+  }
+
+  #root > div {
+    flex-direction: column !important;
+  }
+
+  main {
+    width: 100% !important;
+  }
+}
