@@ -62,7 +62,7 @@ export default function Sidebar({ theme, onToggleTheme }) {
     }}>
       {/* Logo + theme toggle */}
       <div style={{ padding: '0 12px 16px', borderBottom: `1px solid ${border}`, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '20px', fontWeight: '700', color: '#c084fc', letterSpacing: '-0.5px' }}>JohNotes</span>
+        <span style={{ fontSize: '20px', fontWeight: '700', color: '#c084fc', letterSpacing: '-0.5px' }}>Amenō</span>
         <button onClick={onToggleTheme} style={{ background: 'none', border: 'none', cursor: 'pointer', color: text, display: 'flex', padding: '4px' }}>
           {isDark ? <Sun size={15} /> : <Moon size={15} />}
         </button>

@@ -6,7 +6,14 @@ import { Plus, Trash2, FileText, ChevronRight } from 'lucide-react'
 const COLORS = ['#c084fc', '#f472b6', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#818cf8']
 const ICONS = ['📓', '📚', '🔬', '💻', '🎨', '📐', '🧪', '📖', '✏️', '🗂️']
 
-export default function Notebook() {
+export default function Notebook({ theme = 'dark' }) {
+  const isDark = theme === 'dark'
+  const panelBg1 = isDark ? '#12121a' : '#e8e8f0'
+  const panelBg2 = isDark ? '#16161e' : '#ededf5'
+  const borderColor = isDark ? '#2a2a35' : '#d4d4e0'
+  const textMuted = isDark ? '#9ca3af' : '#6b7280'
+  const textActive = isDark ? '#e2e2e7' : '#1a1a2e'
+  const inputBg = isDark ? '#1e1e2a' : '#dcdce8'
   const [subjects, setSubjects] = useState([])
   const [notes, setNotes] = useState([])
   const [activeSubject, setActiveSubject] = useState(null)
@@ -90,11 +97,11 @@ export default function Notebook() {
 
       {/* Subjects panel */}
       <div style={{
-        width: '200px', background: '#12121a', borderRight: '1px solid #2a2a35',
+        width: '200px', background: panelBg1, borderRight: `1px solid ${borderColor}`,
         display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
         <div style={{ padding: '16px 12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Subjects</span>
+          <span style={{ fontSize: '11px', fontWeight: '600', color: textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Subjects</span>
           <button onClick={() => setShowNewSubject(true)} style={iconBtn}>
             <Plus size={14} />
           </button>
@@ -114,7 +121,7 @@ export default function Notebook() {
               }}
             >
               <span style={{ fontSize: '16px' }}>{s.icon}</span>
-              <span style={{ flex: 1, fontSize: '13px', color: activeSubject?.id === s.id ? '#e2e2e7' : '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+              <span style={{ flex: 1, fontSize: '13px', color: activeSubject?.id === s.id ? textActive : textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
               <button onClick={(e) => deleteSubject(s.id, e)} style={{ ...iconBtn, opacity: 0.4, color: '#ef4444' }}>
                 <Trash2 size={12} />
               </button>
@@ -124,14 +131,14 @@ export default function Notebook() {
 
         {/* New subject form */}
         {showNewSubject && (
-          <div style={{ padding: '12px', borderTop: '1px solid #2a2a35' }}>
+          <div style={{ padding: '12px', borderTop: `1px solid ${borderColor}` }}>
             <input
               autoFocus
               value={newSubjectName}
               onChange={e => setNewSubjectName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') createSubject(); if (e.key === 'Escape') setShowNewSubject(false) }}
               placeholder="Subject name"
-              style={inputStyle}
+              style={{ ...inputStyle, background: inputBg, border: `1px solid ${borderColor}`, color: textActive }}
             />
             <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap' }}>
               {COLORS.map(c => (
@@ -160,11 +167,11 @@ export default function Notebook() {
 
       {/* Notes list */}
       <div style={{
-        width: '220px', background: '#16161e', borderRight: '1px solid #2a2a35',
+        width: '220px', background: panelBg2, borderRight: `1px solid ${borderColor}`,
         display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
         <div style={{ padding: '16px 12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <span style={{ fontSize: '11px', fontWeight: '600', color: textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {activeSubject ? activeSubject.name : 'Notes'}
           </span>
           {activeSubject && (
@@ -190,7 +197,7 @@ export default function Notebook() {
               }}
             >
               <FileText size={13} style={{ color: '#6b7280', flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: '13px', color: activeNote?.id === n.id ? '#e2e2e7' : '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, fontSize: '13px', color: activeNote?.id === n.id ? textActive : textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {n.title || 'Untitled'}
               </span>
               <button onClick={(e) => deleteNote(n.id, e)} style={{ ...iconBtn, opacity: 0.4, color: '#ef4444' }}>
@@ -222,8 +229,8 @@ const iconBtn = {
   padding: '2px', display: 'flex', alignItems: 'center', borderRadius: '4px',
 }
 const inputStyle = {
-  width: '100%', background: '#1e1e2a', border: '1px solid #2a2a35', borderRadius: '6px',
-  padding: '6px 8px', color: '#e2e2e7', fontSize: '13px', outline: 'none', boxSizing: 'border-box',
+  width: '100%', background: 'var(--input-bg, #1e1e2a)', border: '1px solid #2a2a35', borderRadius: '6px',
+  padding: '6px 8px', color: 'inherit', fontSize: '13px', outline: 'none', boxSizing: 'border-box',
 }
 const primaryBtn = {
   flex: 1, background: '#7c3aed', border: 'none', borderRadius: '6px',
