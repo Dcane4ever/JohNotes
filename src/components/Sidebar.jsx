@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { BookOpen, BookMarked, Calendar, FileText, Search, X, Palette } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { THEMES } from '../lib/themes'
+import fanLogo from '../assets/Fan.png'
 
 const links = [
   { to: '/', icon: BookOpen, label: 'Notebook' },
@@ -61,13 +62,12 @@ export default function Sidebar({ themeKey, theme, onThemeChange }) {
     }}>
       {/* Logo + theme button */}
       <div style={{ padding: '0 8px 16px', borderBottom: `1px solid ${border}`, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Geometric mark */}
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <polygon points="11,2 20,18 2,18" stroke={theme.accent} strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
-            <line x1="11" y1="8" x2="11" y2="14" stroke={theme.accent} strokeWidth="1.2"/>
-            <circle cx="11" cy="16" r="1" fill={theme.accent}/>
-          </svg>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img
+            src={fanLogo}
+            alt="Amenō"
+            style={{ width: '42px', height: '42px', objectFit: 'contain', objectPosition: 'center top' }}
+          />
           <span style={{
             fontFamily: '"Cormorant Garamond", serif',
             fontSize: '22px', fontWeight: '300', letterSpacing: '0.12em',
