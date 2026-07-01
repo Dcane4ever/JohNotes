@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
 import { supabase } from '../lib/supabase'
-import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, X, StickyNote } from 'lucide-react'
 import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 
@@ -25,7 +25,11 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
   const [saveStatus, setSaveStatus] = useState('saved')
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
-  const [bubble, setBubble] = useState(null) // { x, y, hasLink }
+  const [bubble, setBubble] = useState(null)
+  const [sidenotes, setSidenotes] = useState([]) // [{id, paragraph_index, content}]
+  const [hoveredPara, setHoveredPara] = useState(null) // paragraph index
+  const [editingSidenote, setEditingSidenote] = useState(null) // {paraIndex, id?, content}
+  const editorWrapRef = useRef(null)
   const saveTimer = useRef(null)
 
   const editor = useEditor({
@@ -59,6 +63,64 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  // Load sidenotes for this note
+  useEffect(() => {
+    async function fetchSidenotes() {
+      const { data } = await supabase.from('sidenotes').select('*').eq('note_id', note.id).order('paragraph_index')
+      if (data) setSidenotes(data)
+    }
+    fetchSidenotes()
+  }, [note.id])
+
+  // Track paragraph hover via mouse position over editor DOM
+  const handleEditorMouseMove = useCallback((e) => {
+    if (!editorWrapRef.current) return
+    const paras = editorWrapRef.current.querySelectorAll('.tiptap > p, .tiptap > h2, .tiptap > ul, .tiptap > ol, .tiptap > blockquote')
+    let found = null
+    paras.forEach((el, i) => {
+      const rect = el.getBoundingClientRect()
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom) found = i
+    })
+    setHoveredPara(found)
+  }, [])
+
+  const handleEditorMouseLeave = useCallback(() => setHoveredPara(null), [])
+
+  // Get top offset of paragraph by index (for positioning sidenote)
+  function getParaTop(index) {
+    if (!editorWrapRef.current) return 0
+    const paras = editorWrapRef.current.querySelectorAll('.tiptap > p, .tiptap > h2, .tiptap > ul, .tiptap > ol, .tiptap > blockquote')
+    if (!paras[index]) return 0
+    const wrapRect = editorWrapRef.current.getBoundingClientRect()
+    const paraRect = paras[index].getBoundingClientRect()
+    return paraRect.top - wrapRect.top + editorWrapRef.current.scrollTop
+  }
+
+  async function saveSidenote(paraIndex, content, existingId) {
+    if (!content.trim()) {
+      if (existingId) {
+        await supabase.from('sidenotes').delete().eq('id', existingId)
+        setSidenotes(prev => prev.filter(s => s.id !== existingId))
+      }
+      setEditingSidenote(null)
+      return
+    }
+    if (existingId) {
+      const { data } = await supabase.from('sidenotes').update({ content }).eq('id', existingId).select().single()
+      if (data) setSidenotes(prev => prev.map(s => s.id === existingId ? data : s))
+    } else {
+      const { data } = await supabase.from('sidenotes').insert({ note_id: note.id, paragraph_index: paraIndex, content }).select().single()
+      if (data) setSidenotes(prev => [...prev, data])
+    }
+    setEditingSidenote(null)
+  }
+
+  async function deleteSidenote(id) {
+    await supabase.from('sidenotes').delete().eq('id', id)
+    setSidenotes(prev => prev.filter(s => s.id !== id))
+    setEditingSidenote(null)
+  }
 
   async function saveContent() {
     if (!editor) return
@@ -218,10 +280,129 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
         }}
       />
 
-      {/* Editor */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 32px 32px' }}>
-        <style>{getEditorCSS(editorTextColor, editorHeadingColor, placeholderColor, markerColor)}</style>
-        <EditorContent editor={editor} />
+      {/* Editor + sidenotes layout */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative' }}>
+        {/* Editor column */}
+        <div
+          ref={editorWrapRef}
+          onMouseMove={handleEditorMouseMove}
+          onMouseLeave={handleEditorMouseLeave}
+          style={{ flex: 1, padding: '0 16px 32px 32px', position: 'relative', minWidth: 0 }}
+        >
+          <style>{getEditorCSS(editorTextColor, editorHeadingColor, placeholderColor, markerColor)}</style>
+          <EditorContent editor={editor} />
+
+          {/* Hover + button per paragraph */}
+          {hoveredPara !== null && (() => {
+            const existing = sidenotes.find(s => s.paragraph_index === hoveredPara)
+            if (existing) return null // already has sidenote, show in margin
+            return (
+              <button
+                onMouseDown={e => {
+                  e.preventDefault()
+                  setEditingSidenote({ paraIndex: hoveredPara, id: null, content: '' })
+                }}
+                style={{
+                  position: 'absolute', right: '-8px', top: getParaTop(hoveredPara) + 2,
+                  background: theme.accentBg, border: `1px solid ${borderColor}`,
+                  borderRadius: '50%', width: '22px', height: '22px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: theme.accent, zIndex: 10,
+                }}
+                title="Add sidenote"
+              >
+                <Plus size={12} />
+              </button>
+            )
+          })()}
+        </div>
+
+        {/* Sidenotes margin column */}
+        <div style={{ width: '180px', flexShrink: 0, position: 'relative', paddingTop: '0' }}>
+          {sidenotes.map(s => (
+            <div
+              key={s.id}
+              style={{
+                position: 'absolute', top: getParaTop(s.paragraph_index),
+                left: '8px', right: '4px',
+              }}
+            >
+              {editingSidenote?.id === s.id ? (
+                <SidenoteEditor
+                  initial={s.content}
+                  theme={theme}
+                  borderColor={borderColor}
+                  toolbarBg={toolbarBg}
+                  onSave={content => saveSidenote(s.paragraph_index, content, s.id)}
+                  onDelete={() => deleteSidenote(s.id)}
+                  onCancel={() => setEditingSidenote(null)}
+                />
+              ) : (
+                <div
+                  onClick={() => setEditingSidenote({ paraIndex: s.paragraph_index, id: s.id, content: s.content })}
+                  style={{
+                    background: theme.surface3 || theme.surface2,
+                    border: `1px solid ${borderColor}`,
+                    borderLeft: `3px solid ${theme.accent}`,
+                    borderRadius: '6px', padding: '6px 8px', cursor: 'pointer',
+                    fontSize: '11px', color: theme.textMuted, lineHeight: 1.5,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                    <StickyNote size={10} style={{ color: theme.accent, flexShrink: 0, marginTop: '2px' }} />
+                    <span>{s.content}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* New sidenote editor */}
+          {editingSidenote && !editingSidenote.id && (
+            <div style={{ position: 'absolute', top: getParaTop(editingSidenote.paraIndex), left: '8px', right: '4px' }}>
+              <SidenoteEditor
+                initial=""
+                theme={theme}
+                borderColor={borderColor}
+                toolbarBg={toolbarBg}
+                onSave={content => saveSidenote(editingSidenote.paraIndex, content, null)}
+                onDelete={null}
+                onCancel={() => setEditingSidenote(null)}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SidenoteEditor({ initial, theme, borderColor, toolbarBg, onSave, onDelete, onCancel }) {
+  const [val, setVal] = useState(initial)
+  return (
+    <div style={{
+      background: toolbarBg, border: `1px solid ${borderColor}`,
+      borderLeft: `3px solid ${theme.accent}`, borderRadius: '6px', padding: '6px 8px',
+    }}>
+      <textarea
+        autoFocus
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSave(val) }
+          if (e.key === 'Escape') onCancel()
+        }}
+        placeholder="Add a sidenote..."
+        rows={3}
+        style={{
+          width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none',
+          fontSize: '11px', color: theme.text, lineHeight: 1.5, boxSizing: 'border-box',
+        }}
+      />
+      <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+        <button onClick={() => onSave(val)} style={{ fontSize: '10px', padding: '2px 8px', background: theme.accent, border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer' }}>Save</button>
+        {onDelete && <button onClick={onDelete} style={{ fontSize: '10px', padding: '2px 8px', background: 'none', border: `1px solid #ef4444`, borderRadius: '4px', color: '#ef4444', cursor: 'pointer' }}>Delete</button>}
+        <button onClick={onCancel} style={{ fontSize: '10px', padding: '2px 8px', background: 'none', border: `1px solid ${borderColor}`, borderRadius: '4px', color: theme.textMuted, cursor: 'pointer' }}>Cancel</button>
       </div>
     </div>
   )
