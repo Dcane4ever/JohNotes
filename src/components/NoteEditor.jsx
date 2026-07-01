@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
-import { BubbleMenu } from '@tiptap/extension-bubble-menu'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
@@ -26,6 +25,7 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
   const [saveStatus, setSaveStatus] = useState('saved')
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
+  const [bubble, setBubble] = useState(null) // { x, y, hasLink }
   const saveTimer = useRef(null)
 
   const editor = useEditor({
@@ -42,9 +42,23 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
       clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(saveContent, SAVE_DELAY)
     },
+    onSelectionUpdate: ({ editor: ed }) => {
+      const { from, to } = ed.state.selection
+      if (from === to) { setBubble(null); return }
+      const sel = window.getSelection()
+      if (!sel || sel.rangeCount === 0) { setBubble(null); return }
+      const rect = sel.getRangeAt(0).getBoundingClientRect()
+      setBubble({ x: rect.left + rect.width / 2, y: rect.top, hasLink: ed.isActive('link') })
+    },
   })
 
   useEffect(() => () => clearTimeout(saveTimer.current), [])
+
+  useEffect(() => {
+    function handleClick() { setBubble(null) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   async function saveContent() {
     if (!editor) return
@@ -144,33 +158,42 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
         </div>
       )}
 
-      {/* Bubble menu on text selection */}
-      <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
-        <div style={{
-          background: toolbarBg, border: `1px solid ${borderColor}`,
-          borderRadius: '8px', padding: '4px 6px', display: 'flex', gap: '2px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-        }}>
+      {/* Floating bubble on selection */}
+      {bubble && (
+        <div
+          onMouseDown={e => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            left: bubble.x, top: bubble.y - 44,
+            transform: 'translateX(-50%)',
+            background: toolbarBg, border: `1px solid ${borderColor}`,
+            borderRadius: '8px', padding: '4px 6px', display: 'flex', gap: '2px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)', zIndex: 9999,
+          }}
+        >
           <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold" isDark={isDark}><Bold size={13} /></ToolBtn>
           <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic" isDark={isDark}><Italic size={13} /></ToolBtn>
           <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="Strike" isDark={isDark}><Strikethrough size={13} /></ToolBtn>
           <div style={{ width: '1px', height: '18px', background: borderColor, margin: '0 2px', alignSelf: 'center' }} />
           <ToolBtn
             onClick={() => {
-              if (editor.isActive('link')) {
+              if (bubble.hasLink) {
                 editor.chain().focus().unsetLink().run()
+                setBubble(null)
               } else {
-                setLinkUrl(editor.getAttributes('link').href || '')
+                setLinkUrl('')
                 setShowLinkInput(true)
+                setBubble(null)
               }
             }}
-            active={editor.isActive('link')} title={editor.isActive('link') ? 'Remove link' : 'Make hyperlink'} isDark={isDark}>
-            {editor.isActive('link') ? <Link2Off size={13} /> : <Link2 size={13} />}
+            active={bubble.hasLink} title={bubble.hasLink ? 'Remove link' : 'Make hyperlink'} isDark={isDark}>
+            {bubble.hasLink ? <Link2Off size={13} /> : <Link2 size={13} />}
           </ToolBtn>
-          {!editor.isActive('link') && <span style={{ fontSize: '11px', color: theme.textMuted, alignSelf: 'center', paddingRight: '4px' }}>Link</span>}
-          {editor.isActive('link') && <span style={{ fontSize: '11px', color: '#ef4444', alignSelf: 'center', paddingRight: '4px' }}>Remove</span>}
+          <span style={{ fontSize: '11px', color: bubble.hasLink ? '#ef4444' : theme.textMuted, alignSelf: 'center', paddingRight: '2px' }}>
+            {bubble.hasLink ? 'Remove' : 'Link'}
+          </span>
         </div>
-      </BubbleMenu>
+      )}
 
       {/* Title */}
       <input
