@@ -22,6 +22,7 @@ export default function Schedule() {
   const [editEvent, setEditEvent] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
   const [notifPermission, setNotifPermission] = useState('default')
+  const [dayDetail, setDayDetail] = useState(null) // { day, events }
 
   useEffect(() => {
     fetchEvents()
@@ -160,7 +161,10 @@ export default function Schedule() {
                     </div>
                   ))}
                   {dayEvents.length > 3 && (
-                    <span style={{ fontSize: '9px', color: '#6b7280' }}>+{dayEvents.length - 3} more</span>
+                    <span
+                      onClick={e => { e.stopPropagation(); setDayDetail({ day, events: dayEvents }) }}
+                      style={{ fontSize: '9px', color: '#c084fc', cursor: 'pointer', fontWeight: '600' }}
+                    >+{dayEvents.length - 3} more</span>
                   )}
                 </>
               )}
@@ -168,6 +172,47 @@ export default function Schedule() {
           )
         })}
       </div>
+
+      {/* Day detail modal */}
+      {dayDetail && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+          onClick={() => setDayDetail(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#16161e', border: '1px solid #2a2a35', borderRadius: '12px', width: '360px', maxHeight: '80vh', overflowY: 'auto', padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#e2e2e7' }}>
+                {MONTHS[month]} {dayDetail.day}, {year}
+              </h3>
+              <button onClick={() => setDayDetail(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {dayDetail.events.map(ev => (
+                <div
+                  key={ev.id}
+                  onClick={() => { setDayDetail(null); openEdit(ev, { stopPropagation: () => {} }) }}
+                  style={{
+                    background: ev.color || '#7c3aed', borderRadius: '6px',
+                    padding: '8px 12px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
+                  }}
+                >
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: 'white' }}>{ev.title}</span>
+                  {ev.start_time && (
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)' }}>
+                      {new Date(ev.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                  {ev.notes && <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>{ev.notes}</span>}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => { setDayDetail(null); openAdd(new Date(year, month, dayDetail.day)) }}
+              style={{ ...primaryBtn, width: '100%', justifyContent: 'center', marginTop: '14px' }}
+            >
+              <Plus size={14} /> Add Event
+            </button>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <EventModal
