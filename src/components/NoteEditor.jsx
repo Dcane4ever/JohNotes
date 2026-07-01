@@ -30,7 +30,7 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ link: false }),
       Placeholder.configure({ placeholder: 'Start writing...' }),
       TaskList,
       TaskItem.configure({ nested: true }),
