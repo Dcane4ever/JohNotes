@@ -98,6 +98,8 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
   const [embedModal, setEmbedModal] = useState(null) // {type: 'image'|'video'|'widget'}
   const [embedUrl, setEmbedUrl] = useState('')
   const [embedUploading, setEmbedUploading] = useState(false)
+  // Selected block node (image/iframe/codeBlock) → show delete bar
+  const [selectedBlock, setSelectedBlock] = useState(null) // {type, rect: {top,left,width}}
 
   const editorWrapRef = useRef(null)
   const saveTimer = useRef(null)
@@ -159,11 +161,23 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
     },
     onSelectionUpdate: ({ editor: ed }) => {
       const { from, to } = ed.state.selection
+      // Check for selected block node (image / iframe / codeBlock)
+      const node = ed.state.selection.$from.nodeAfter || ed.state.doc.nodeAt(from)
+      if (node && (node.type.name === 'image' || node.type.name === 'iframe' || node.type.name === 'codeBlock')) {
+        try {
+          const domNode = ed.view.nodeDOM(from)
+          if (domNode) {
+            const rect = (domNode.getBoundingClientRect ? domNode : domNode.parentElement)?.getBoundingClientRect()
+            if (rect) { setSelectedBlock({ type: node.type.name, rect, pos: from }); setBubble(null); return }
+          }
+        } catch {}
+      }
+      setSelectedBlock(null)
       if (from === to) { setBubble(null); return }
       const sel = window.getSelection()
       if (!sel || sel.rangeCount === 0) { setBubble(null); return }
-      const rect = sel.getRangeAt(0).getBoundingClientRect()
-      setBubble({ x: rect.left + rect.width / 2, y: rect.top, hasLink: ed.isActive('link') })
+      const selRect = sel.getRangeAt(0).getBoundingClientRect()
+      setBubble({ x: selRect.left + selRect.width / 2, y: selRect.top, hasLink: ed.isActive('link') })
     },
   })
 
@@ -522,6 +536,38 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Selected block delete bar */}
+      {selectedBlock && (
+        <div
+          onMouseDown={e => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            left: selectedBlock.rect.left + selectedBlock.rect.width / 2,
+            top: selectedBlock.rect.top - 38,
+            transform: 'translateX(-50%)',
+            background: toolbarBg, border: `1px solid ${borderColor}`,
+            borderRadius: '8px', padding: '4px 8px',
+            display: 'flex', alignItems: 'center', gap: '8px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)', zIndex: 9999,
+          }}
+        >
+          <span style={{ fontSize: '11px', color: theme.textMuted }}>
+            {selectedBlock.type === 'image' ? '🖼️ Image' : selectedBlock.type === 'iframe' ? '▶️ Embed' : '</> Code'}
+          </span>
+          <div style={{ width: '1px', height: '16px', background: borderColor }} />
+          <button
+            onMouseDown={e => {
+              e.preventDefault()
+              editor.chain().focus().deleteRange({ from: selectedBlock.pos, to: selectedBlock.pos + 1 }).run()
+              setSelectedBlock(null)
+            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '12px', fontWeight: '600', padding: '2px 4px' }}
+          >
+            Delete
+          </button>
         </div>
       )}
 
