@@ -437,7 +437,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
     const url = embedUrl.trim()
     if (!url) return
     if (embedModal.type === 'math') {
-      editor.chain().focus().insertContent(`$${url}$`).run()
+      editor.chain().focus().insertBlockMath({ latex: url }).run()
       setEmbedModal(null); setEmbedUrl(''); return
     }
     if (embedModal.type === 'image') {
@@ -969,7 +969,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
                 value={embedUrl}
                 onChange={e => setEmbedUrl(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') insertEmbed(); if (e.key === 'Escape') setEmbedModal(null) }}
-                placeholder={embedModal.type === 'image' ? 'https://example.com/image.png' : embedModal.type === 'video' ? 'https://youtube.com/watch?v=...' : 'https://widgets.potion.so/...'}
+                placeholder={embedModal.type === 'image' ? 'https://example.com/image.png' : embedModal.type === 'video' ? 'https://youtube.com/watch?v=...' : embedModal.type === 'math' ? 'x^2 + y^2 = r^2' : 'https://widgets.potion.so/...'}
                 style={{ flex: 1, background: theme.surface1, border: `1px solid ${borderColor}`, borderRadius: '8px', padding: '8px 12px', color: theme.text, fontSize: '13px', outline: 'none' }}
               />
               <button onClick={insertEmbed} style={{ background: theme.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500' }}>Insert</button>
