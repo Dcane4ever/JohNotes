@@ -40,14 +40,17 @@ Deno.serve(async () => {
 
   for (const event of events) {
     const eventTime = new Date(event.start_time).toLocaleTimeString('en-US', {
-      hour: '2-digit', minute: '2-digit', hour12: true,
+      hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila',
+    })
+    const eventDate = new Date(event.start_time).toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', timeZone: 'Asia/Manila',
     })
 
     const html = `
       <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #1e2030; color: #c8d3f5; border-radius: 12px;">
         <h2 style="font-size: 22px; color: #e06c75; margin-bottom: 8px;">⏰ Upcoming Reminder</h2>
         <h3 style="font-size: 18px; color: #c8d3f5; margin-bottom: 4px;">${event.title}</h3>
-        <p style="font-size: 14px; color: #828bb8;">Today at ${eventTime}</p>
+        <p style="font-size: 14px; color: #828bb8;">${eventDate} at ${eventTime}</p>
         ${event.notes ? `<p style="font-size: 13px; color: #828bb8; margin-top: 12px; border-left: 3px solid #e06c75; padding-left: 12px;">${event.notes}</p>` : ''}
         <p style="font-size: 11px; color: #444874; margin-top: 24px;">Sent by Amenō</p>
       </div>
@@ -62,7 +65,7 @@ Deno.serve(async () => {
       body: JSON.stringify({
         sender: { name: SENDER_NAME, email: SENDER_EMAIL },
         to: [{ email: recipientEmail }],
-        subject: `⏰ Reminder: ${event.title} at ${eventTime}`,
+        subject: `⏰ Reminder: ${event.title} at ${eventTime} (PHT)`,
         htmlContent: html,
       }),
     })
