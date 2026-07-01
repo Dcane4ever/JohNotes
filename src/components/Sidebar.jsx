@@ -60,10 +60,22 @@ export default function Sidebar({ themeKey, theme, onThemeChange }) {
       flexShrink: 0, position: 'relative',
     }}>
       {/* Logo + theme button */}
-      <div style={{ padding: '0 12px 16px', borderBottom: `1px solid ${border}`, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '20px', fontWeight: '700', color: theme.accent, letterSpacing: '-0.5px' }}>Amenō</span>
+      <div style={{ padding: '0 8px 16px', borderBottom: `1px solid ${border}`, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Geometric mark */}
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <polygon points="11,2 20,18 2,18" stroke={theme.accent} strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
+            <line x1="11" y1="8" x2="11" y2="14" stroke={theme.accent} strokeWidth="1.2"/>
+            <circle cx="11" cy="16" r="1" fill={theme.accent}/>
+          </svg>
+          <span style={{
+            fontFamily: '"Cormorant Garamond", serif',
+            fontSize: '22px', fontWeight: '300', letterSpacing: '0.12em',
+            color: theme.text, fontStyle: 'italic',
+          }}>Amenō</span>
+        </div>
         <button onClick={() => setShowThemePicker(p => !p)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: text, display: 'flex', padding: '4px' }} title="Change theme">
-          <Palette size={15} />
+          <Palette size={14} />
         </button>
       </div>
 
