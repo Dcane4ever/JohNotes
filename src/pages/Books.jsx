@@ -56,6 +56,12 @@ export default function Books({ theme = {} }) {
     setBooks(prev => prev.filter(b => b.id !== id))
   }
 
+  async function updateCurrentPage(id, current_page, e) {
+    e.stopPropagation()
+    const { data } = await supabase.from('books').update({ current_page }).eq('id', id).select().single()
+    if (data) setBooks(prev => prev.map(b => b.id === id ? data : b))
+  }
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
@@ -66,40 +72,31 @@ export default function Books({ theme = {} }) {
         </button>
       </div>
 
-      {/* Filter tabs */}
+      {/* Status filter */}
       <div style={{ padding: '16px 28px 0', display: 'flex', gap: '8px', flexShrink: 0 }}>
         {STATUSES.map(s => (
-          <button
-            key={s.key}
-            onClick={() => setFilter(s.key)}
-            style={{
-              padding: '6px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer',
-              fontSize: '13px', fontWeight: '500',
-              background: filter === s.key ? t.accentBtn : t.surface3,
-              color: filter === s.key ? 'white' : t.textMuted,
-              transition: 'all 0.15s',
-            }}
-          >
+          <button key={s.key} onClick={() => setFilter(s.key)} style={{
+            padding: '6px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+            fontSize: '13px', fontWeight: '500', transition: 'all 0.15s',
+            background: filter === s.key ? t.accentBtn : t.surface3,
+            color: filter === s.key ? 'white' : t.textMuted,
+          }}>
             {s.label} {s.key !== 'all' && `(${books.filter(b => b.status === s.key).length})`}
           </button>
         ))}
       </div>
 
-      {/* Genre tabs — auto-generated from book genres */}
+      {/* Genre chip filter */}
       {genres.length > 1 && (
         <div style={{ padding: '10px 28px 0', display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
           {genres.map(g => (
-            <button
-              key={g}
-              onClick={() => setGenreFilter(g)}
-              style={{
-                padding: '4px 12px', borderRadius: '20px', border: '1px solid',
-                cursor: 'pointer', fontSize: '12px', fontWeight: '500', transition: 'all 0.15s',
-                background: genreFilter === g ? t.accentBg : 'transparent',
-                borderColor: genreFilter === g ? t.accent : t.border,
-                color: genreFilter === g ? t.accent : t.textMuted,
-              }}
-            >
+            <button key={g} onClick={() => setGenreFilter(g)} style={{
+              padding: '4px 12px', borderRadius: '20px', border: '1px solid', cursor: 'pointer',
+              fontSize: '12px', fontWeight: '500', transition: 'all 0.15s',
+              background: genreFilter === g ? t.accentBg : 'transparent',
+              borderColor: genreFilter === g ? t.accent : t.border,
+              color: genreFilter === g ? t.accent : t.textMuted,
+            }}>
               {g === 'all' ? 'All genres' : g}
             </button>
           ))}
@@ -116,75 +113,124 @@ export default function Books({ theme = {} }) {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px' }}>
             {filtered.map(book => (
-              <BookCard key={book.id} book={book} theme={t} onClick={() => openEdit(book)} onDelete={deleteBook} />
+              <BookCard key={book.id} book={book} theme={t} onClick={() => openEdit(book)} onDelete={deleteBook} onUpdatePage={updateCurrentPage} />
             ))}
           </div>
         )}
       </div>
 
       {showModal && (
-        <BookModal
-          book={editBook}
-          theme={t}
-          onClose={() => setShowModal(false)}
-          onSaved={onSaved}
-        />
+        <BookModal book={editBook} theme={t} onClose={() => setShowModal(false)} onSaved={onSaved} />
       )}
     </div>
   )
 }
 
-function BookCard({ book, theme: t, onClick, onDelete }) {
+function BookCard({ book, theme: t, onClick, onDelete, onUpdatePage }) {
+  const [editingPage, setEditingPage] = useState(false)
+  const [pageVal, setPageVal] = useState(book.current_page || 0)
+  const pct = book.total_pages > 0 ? Math.min(100, ((book.current_page || 0) / book.total_pages) * 100) : 0
+
   return (
     <div onClick={onClick} style={{ cursor: 'pointer', position: 'relative' }}>
-      {/* Cover */}
       <div style={{
         width: '100%', aspectRatio: '2/3', borderRadius: '8px', overflow: 'hidden',
         background: t.surface3, border: `1px solid ${t.border}`, marginBottom: '10px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        {book.cover_url ? (
-          <img src={book.cover_url} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <BookOpen size={32} style={{ color: t.textFaint }} />
-        )}
-        {/* Status badge */}
-        <div style={{
-          position: 'absolute', top: '8px', left: '8px',
-          background: STATUS_COLORS[book.status] || '#6b7280',
-          borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '600', color: '#0f0f13',
-        }}>
+        {book.cover_url
+          ? <img src={book.cover_url} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <BookOpen size={32} style={{ color: t.textFaint }} />}
+        <div style={{ position: 'absolute', top: '8px', left: '8px', background: STATUS_COLORS[book.status] || '#6b7280', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '600', color: '#0f0f13' }}>
           {book.status === 'want_to_read' ? 'WANT' : book.status === 'reading' ? 'READING' : 'DONE'}
         </div>
-        {/* Delete */}
-        <button
-          onClick={(e) => onDelete(book.id, e)}
-          style={{
-            position: 'absolute', top: '8px', right: '8px',
-            background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '4px',
-            padding: '3px', color: '#ef4444', cursor: 'pointer', display: 'flex',
-          }}
-        >
+        <button onClick={e => onDelete(book.id, e)} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '4px', padding: '3px', color: '#ef4444', cursor: 'pointer', display: 'flex' }}>
           <X size={12} />
         </button>
       </div>
+
       <p style={{ fontSize: '13px', fontWeight: '600', color: t.text, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</p>
       <p style={{ fontSize: '12px', color: t.textMuted, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.author}</p>
+
+      {/* Genre chips */}
+      {book.genre && (
+        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginBottom: '4px' }}>
+          {book.genre.split(',').map(g => g.trim()).filter(Boolean).map(g => (
+            <span key={g} style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '10px', background: t.accentBg, color: t.accent, border: `1px solid ${t.border}` }}>{g}</span>
+          ))}
+        </div>
+      )}
+
       {book.rating > 0 && (
-        <div style={{ display: 'flex', gap: '2px' }}>
+        <div style={{ display: 'flex', gap: '2px', marginBottom: '4px' }}>
           {[1,2,3,4,5].map(i => (
             <Star key={i} size={11} fill={i <= book.rating ? '#facc15' : 'none'} stroke={i <= book.rating ? '#facc15' : t.textFaint} />
           ))}
         </div>
       )}
+
+      {/* Reading progress — click to update page */}
       {book.status === 'reading' && book.total_pages > 0 && (
-        <div style={{ marginTop: '4px' }}>
-          <div style={{ height: '3px', background: t.border, borderRadius: '2px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, (book.current_page / book.total_pages) * 100)}%`, background: '#38bdf8', borderRadius: '2px' }} />
+        <div style={{ marginTop: '2px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ height: '3px', background: t.border, borderRadius: '2px', overflow: 'hidden', marginBottom: '3px' }}>
+            <div style={{ height: '100%', width: `${pct}%`, background: '#38bdf8', borderRadius: '2px' }} />
           </div>
-          <p style={{ fontSize: '10px', color: t.textMuted, marginTop: '2px' }}>{book.current_page}/{book.total_pages} pages</p>
+          {editingPage ? (
+            <input
+              autoFocus
+              type="number"
+              value={pageVal}
+              onChange={e => setPageVal(e.target.value)}
+              onBlur={e => { onUpdatePage(book.id, Number(pageVal), e); setEditingPage(false) }}
+              onKeyDown={e => { if (e.key === 'Enter') { onUpdatePage(book.id, Number(pageVal), e); setEditingPage(false) } if (e.key === 'Escape') setEditingPage(false) }}
+              style={{ width: '60px', fontSize: '10px', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '4px', padding: '1px 4px', color: t.text, outline: 'none' }}
+            />
+          ) : (
+            <p onClick={() => setEditingPage(true)} style={{ fontSize: '10px', color: t.textMuted, cursor: 'text', margin: 0 }} title="Click to update page">
+              {book.current_page || 0}/{book.total_pages} pages
+            </p>
+          )}
         </div>
       )}
+    </div>
+  )
+}
+
+// Chip input for genre
+function GenreChipInput({ value, onChange, theme: t }) {
+  const chips = value ? value.split(',').map(g => g.trim()).filter(Boolean) : []
+  const [input, setInput] = useState('')
+
+  function addChip(val) {
+    const trimmed = val.trim()
+    if (!trimmed || chips.includes(trimmed)) { setInput(''); return }
+    onChange([...chips, trimmed].join(', '))
+    setInput('')
+  }
+
+  function removeChip(chip) {
+    onChange(chips.filter(c => c !== chip).join(', '))
+  }
+
+  return (
+    <div style={{ border: `1px solid ${t.border}`, borderRadius: '6px', background: t.surface1, padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+      {chips.map(chip => (
+        <span key={chip} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: t.accentBg, border: `1px solid ${t.accent}40`, borderRadius: '12px', padding: '2px 8px', fontSize: '12px', color: t.accent }}>
+          {chip}
+          <button onClick={() => removeChip(chip)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.accent, padding: 0, lineHeight: 1, fontSize: '12px' }}>×</button>
+        </span>
+      ))}
+      <input
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addChip(input) }
+          if (e.key === 'Backspace' && !input && chips.length) removeChip(chips[chips.length - 1])
+        }}
+        onBlur={() => { if (input.trim()) addChip(input) }}
+        placeholder={chips.length ? '' : 'Add genre, press Enter'}
+        style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '12px', color: t.text, minWidth: '80px', flex: 1 }}
+      />
     </div>
   )
 }
@@ -198,7 +244,6 @@ function BookModal({ book, theme: t, onClose, onSaved }) {
     status: book?.status || 'want_to_read',
     rating: book?.rating || 0,
     review: book?.review || '',
-    current_page: book?.current_page || 0,
     total_pages: book?.total_pages || 0,
     cover_url: book?.cover_url || '',
   })
@@ -225,12 +270,7 @@ function BookModal({ book, theme: t, onClose, onSaved }) {
   async function save() {
     if (!form.title.trim()) return
     setSaving(true)
-    const payload = {
-      ...form,
-      current_page: Number(form.current_page) || 0,
-      total_pages: Number(form.total_pages) || 0,
-      rating: Number(form.rating) || 0,
-    }
+    const payload = { ...form, total_pages: Number(form.total_pages) || 0, rating: Number(form.rating) || 0 }
     if (isEdit) {
       const { data } = await supabase.from('books').update(payload).eq('id', book.id).select().single()
       if (data) onSaved(data, false)
@@ -241,8 +281,8 @@ function BookModal({ book, theme: t, onClose, onSaved }) {
     setSaving(false)
   }
 
-  const modalInput = { width: '100%', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '6px', padding: '8px 10px', color: t.text, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }
-  const modalLabel = { fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }
+  const mInput = { width: '100%', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '6px', padding: '8px 10px', color: t.text, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }
+  const mLabel = { fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
@@ -256,21 +296,10 @@ function BookModal({ book, theme: t, onClose, onSaved }) {
           {/* Cover upload */}
           <div style={{ flexShrink: 0 }}>
             <label style={{ cursor: 'pointer' }}>
-              <div style={{
-                width: '110px', height: '165px', borderRadius: '8px', border: `2px dashed ${t.border}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: '8px', color: t.textFaint, overflow: 'hidden', background: t.surface1,
-              }}>
-                {form.cover_url ? (
-                  <img src={form.cover_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : uploading ? (
-                  <p style={{ fontSize: '11px' }}>Uploading...</p>
-                ) : (
-                  <>
-                    <Upload size={20} />
-                    <p style={{ fontSize: '11px', textAlign: 'center' }}>Upload cover</p>
-                  </>
-                )}
+              <div style={{ width: '110px', height: '165px', borderRadius: '8px', border: `2px dashed ${t.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: t.textFaint, overflow: 'hidden', background: t.surface1 }}>
+                {form.cover_url ? <img src={form.cover_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : uploading ? <p style={{ fontSize: '11px' }}>Uploading...</p>
+                  : <><Upload size={20} /><p style={{ fontSize: '11px', textAlign: 'center' }}>Upload cover</p></>}
               </div>
               <input type="file" accept="image/*" onChange={uploadCover} style={{ display: 'none' }} />
             </label>
@@ -278,35 +307,36 @@ function BookModal({ book, theme: t, onClose, onSaved }) {
 
           {/* Fields */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <ModalField label="Title *" value={form.title} onChange={v => set('title', v)} placeholder="Book title" inputStyle={modalInput} labelStyle={modalLabel} />
-            <ModalField label="Author" value={form.author} onChange={v => set('author', v)} placeholder="Author name" inputStyle={modalInput} labelStyle={modalLabel} />
-            <ModalField label="Genre" value={form.genre} onChange={v => set('genre', v)} placeholder="e.g. Fiction, Science" inputStyle={modalInput} labelStyle={modalLabel} />
+            <div><label style={mLabel}>Title *</label><input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Book title" style={{ ...mInput, marginTop: '6px' }} /></div>
+            <div><label style={mLabel}>Author</label><input value={form.author} onChange={e => set('author', e.target.value)} placeholder="Author name" style={{ ...mInput, marginTop: '6px' }} /></div>
+
+            {/* Genre chip input */}
+            <div>
+              <label style={mLabel}>Genre</label>
+              <div style={{ marginTop: '6px' }}>
+                <GenreChipInput value={form.genre} onChange={v => set('genre', v)} theme={t} />
+              </div>
+            </div>
 
             {/* Status */}
             <div>
-              <label style={modalLabel}>Status</label>
+              <label style={mLabel}>Status</label>
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                 {STATUSES.filter(s => s.key !== 'all').map(s => (
-                  <button key={s.key} onClick={() => set('status', s.key)} style={{
-                    flex: 1, padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '500',
-                    background: form.status === s.key ? t.accentBtn : t.surface3,
-                    color: form.status === s.key ? 'white' : t.textMuted,
-                  }}>{s.label}</button>
+                  <button key={s.key} onClick={() => set('status', s.key)} style={{ flex: 1, padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '500', background: form.status === s.key ? t.accentBtn : t.surface3, color: form.status === s.key ? 'white' : t.textMuted }}>{s.label}</button>
                 ))}
               </div>
             </div>
 
             {/* Star rating */}
             <div>
-              <label style={modalLabel}>Rating</label>
+              <label style={mLabel}>Rating</label>
               <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                 {[1,2,3,4,5].map(i => (
-                  <Star
-                    key={i} size={22} style={{ cursor: 'pointer' }}
+                  <Star key={i} size={22} style={{ cursor: 'pointer' }}
                     fill={(hoverStar || form.rating) >= i ? '#facc15' : 'none'}
                     stroke={(hoverStar || form.rating) >= i ? '#facc15' : t.textFaint}
-                    onMouseEnter={() => setHoverStar(i)}
-                    onMouseLeave={() => setHoverStar(0)}
+                    onMouseEnter={() => setHoverStar(i)} onMouseLeave={() => setHoverStar(0)}
                     onClick={() => set('rating', i === form.rating ? 0 : i)}
                   />
                 ))}
@@ -315,24 +345,16 @@ function BookModal({ book, theme: t, onClose, onSaved }) {
           </div>
         </div>
 
-        {/* Progress (only if reading) */}
-        {form.status === 'reading' && (
-          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-            <ModalField label="Current page" value={form.current_page} onChange={v => set('current_page', v)} type="number" inputStyle={modalInput} labelStyle={modalLabel} />
-            <ModalField label="Total pages" value={form.total_pages} onChange={v => set('total_pages', v)} type="number" inputStyle={modalInput} labelStyle={modalLabel} />
-          </div>
-        )}
+        {/* Total pages only */}
+        <div style={{ marginTop: '16px' }}>
+          <label style={mLabel}>Total Pages</label>
+          <input type="number" value={form.total_pages} onChange={e => set('total_pages', e.target.value)} placeholder="0" style={{ ...mInput, marginTop: '6px', width: '120px' }} />
+        </div>
 
         {/* Review */}
         <div style={{ marginTop: '16px' }}>
-          <label style={modalLabel}>Review / Notes</label>
-          <textarea
-            value={form.review}
-            onChange={e => set('review', e.target.value)}
-            placeholder="Your thoughts on this book..."
-            rows={3}
-            style={{ ...modalInput, resize: 'vertical', marginTop: '6px' }}
-          />
+          <label style={mLabel}>Review / Notes</label>
+          <textarea value={form.review} onChange={e => set('review', e.target.value)} placeholder="Your thoughts on this book..." rows={3} style={{ ...mInput, resize: 'vertical', marginTop: '6px' }} />
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
@@ -342,21 +364,6 @@ function BookModal({ book, theme: t, onClose, onSaved }) {
           <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer', flex: 1 }}>Cancel</button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function ModalField({ label, value, onChange, placeholder, type = 'text', inputStyle, labelStyle }) {
-  return (
-    <div>
-      <label style={labelStyle}>{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{ ...inputStyle, marginTop: '6px' }}
-      />
     </div>
   )
 }

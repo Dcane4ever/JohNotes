@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, X, Search, Tag, ExternalLink, GitCompare, FileText, ChevronDown, ChevronUp, BookOpen } from 'lucide-react'
+import { Plus, X, Search, ExternalLink, GitCompare, FileText, ChevronDown, ChevronUp, BookOpen, LayoutGrid, List, AlignLeft } from 'lucide-react'
 
 export default function RRL({ theme = {} }) {
   const t = theme
   const [entries, setEntries] = useState([])
   const [search, setSearch] = useState('')
   const [activeTag, setActiveTag] = useState('all')
+  const [view, setView] = useState('list') // 'list' | 'grid' | 'detail'
   const [showModal, setShowModal] = useState(false)
   const [editEntry, setEditEntry] = useState(null)
   const [compareMode, setCompareMode] = useState(false)
@@ -53,17 +54,36 @@ export default function RRL({ theme = {} }) {
   const inputStyle = { width: '100%', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '6px', padding: '8px 10px', color: t.text, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }
   const tagPill = { fontSize: '11px', color: t.accent, background: t.accentBg, padding: '2px 8px', borderRadius: '20px', border: `1px solid ${t.border}` }
 
+  const VIEW_BTNS = [
+    { key: 'list', icon: List, title: 'List' },
+    { key: 'grid', icon: LayoutGrid, title: 'Grid' },
+    { key: 'detail', icon: AlignLeft, title: 'Detail' },
+  ]
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: t.text }}>RRL Compiler</h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* View toggle */}
+          <div style={{ display: 'flex', background: t.surface3, borderRadius: '8px', padding: '3px', gap: '2px' }}>
+            {VIEW_BTNS.map(({ key, icon: Icon, title }) => (
+              <button key={key} title={title} onClick={() => setView(key)} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '30px', height: '30px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                background: view === key ? t.accentBtn : 'transparent',
+                color: view === key ? 'white' : t.textMuted,
+              }}>
+                <Icon size={14} />
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => { setCompareMode(!compareMode); setCompareSelected([]) }}
             style={{ ...(compareMode ? primaryBtn : ghostBtn), display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <GitCompare size={14} /> {compareMode ? 'Exit Compare' : 'Compare'}
+            <GitCompare size={14} /> {compareMode ? 'Exit' : 'Compare'}
           </button>
           <button onClick={() => { setEditEntry(null); setShowModal(true) }} style={primaryBtn}>
             <Plus size={15} /> Add Entry
@@ -82,18 +102,20 @@ export default function RRL({ theme = {} }) {
             style={{ ...inputStyle, paddingLeft: '32px' }}
           />
         </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {allTags.map(tag => (
-            <button key={tag} onClick={() => setActiveTag(tag)} style={{
-              padding: '4px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
-              fontSize: '12px', fontWeight: '500',
-              background: activeTag === tag ? t.accentBtn : t.surface3,
-              color: activeTag === tag ? 'white' : t.textMuted,
-            }}>
-              {tag === 'all' ? 'All' : `#${tag}`}
-            </button>
-          ))}
-        </div>
+        {allTags.length > 1 && (
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {allTags.map(tag => (
+              <button key={tag} onClick={() => setActiveTag(tag)} style={{
+                padding: '4px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+                fontSize: '12px', fontWeight: '500',
+                background: activeTag === tag ? t.accentBtn : t.surface3,
+                color: activeTag === tag ? 'white' : t.textMuted,
+              }}>
+                {tag === 'all' ? 'All' : `#${tag}`}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Compare mode banner */}
@@ -135,25 +157,38 @@ export default function RRL({ theme = {} }) {
           </div>
         </div>
       ) : (
-        /* Entry list */
+        /* Entry views */
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 20px' }}>
           {filtered.length === 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', flexDirection: 'column', gap: '12px', color: t.textFaint }}>
               <FileText size={40} />
               <p style={{ fontSize: '14px' }}>No entries yet. Add your first reference!</p>
             </div>
+          ) : view === 'grid' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
+              {filtered.map(entry => (
+                <GridCard key={entry.id} entry={entry} theme={t} tagPill={tagPill}
+                  compareMode={compareMode === true} selected={compareSelected.some(e => e.id === entry.id)}
+                  onToggleCompare={() => toggleCompare(entry)} onEdit={() => { setEditEntry(entry); setShowModal(true) }}
+                />
+              ))}
+            </div>
+          ) : view === 'detail' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {filtered.map(entry => (
+                <DetailCard key={entry.id} entry={entry} theme={t} tagPill={tagPill}
+                  compareMode={compareMode === true} selected={compareSelected.some(e => e.id === entry.id)}
+                  onToggleCompare={() => toggleCompare(entry)} onEdit={() => { setEditEntry(entry); setShowModal(true) }}
+                  onAddToNotebook={() => setAddToNotebook(entry)}
+                />
+              ))}
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {filtered.map(entry => (
-                <EntryCard
-                  key={entry.id}
-                  entry={entry}
-                  theme={t}
-                  tagPill={tagPill}
-                  compareMode={compareMode === true}
-                  selected={compareSelected.some(e => e.id === entry.id)}
-                  onToggleCompare={() => toggleCompare(entry)}
-                  onEdit={() => { setEditEntry(entry); setShowModal(true) }}
+                <EntryCard key={entry.id} entry={entry} theme={t} tagPill={tagPill}
+                  compareMode={compareMode === true} selected={compareSelected.some(e => e.id === entry.id)}
+                  onToggleCompare={() => toggleCompare(entry)} onEdit={() => { setEditEntry(entry); setShowModal(true) }}
                   onAddToNotebook={() => setAddToNotebook(entry)}
                 />
               ))}
@@ -163,46 +198,29 @@ export default function RRL({ theme = {} }) {
       )}
 
       {showModal && (
-        <EntryModal
-          entry={editEntry}
-          theme={t}
-          onClose={() => setShowModal(false)}
-          onSaved={onSaved}
-          onDelete={deleteEntry}
-        />
+        <EntryModal entry={editEntry} theme={t} onClose={() => setShowModal(false)} onSaved={onSaved} onDelete={deleteEntry} />
       )}
 
       {addToNotebook && (
-        <AddToNotebookModal
-          entry={addToNotebook}
-          theme={t}
-          onClose={() => setAddToNotebook(null)}
-        />
+        <AddToNotebookModal entry={addToNotebook} theme={t} onClose={() => setAddToNotebook(null)} />
       )}
     </div>
   )
 }
 
+/* ── List card (original) ───────────────────────────────── */
 function EntryCard({ entry, theme: t, tagPill, compareMode, selected, onToggleCompare, onEdit, onAddToNotebook }) {
   const [expanded, setExpanded] = useState(false)
-
   return (
-    <div style={{
-      background: t.surface1, border: `1px solid ${selected ? t.accent : t.border}`,
-      borderRadius: '10px', padding: '16px', cursor: 'pointer',
-      outline: selected ? `1px solid ${t.accent}` : 'none',
-    }}
-      onClick={compareMode ? onToggleCompare : onEdit}
-    >
+    <div style={{ background: t.surface1, border: `1px solid ${selected ? t.accent : t.border}`, borderRadius: '10px', padding: '16px', cursor: 'pointer', outline: selected ? `1px solid ${t.accent}` : 'none' }}
+      onClick={compareMode ? onToggleCompare : onEdit}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <h3 style={{ fontSize: '14px', fontWeight: '700', color: t.text, margin: 0 }}>{entry.title}</h3>
             {entry.year && <span style={{ fontSize: '11px', color: t.textMuted, background: t.surface3, padding: '1px 6px', borderRadius: '4px' }}>{entry.year}</span>}
           </div>
-          {entry.authors?.length > 0 && (
-            <p style={{ fontSize: '12px', color: t.textMuted, margin: '4px 0 0' }}>{entry.authors.join(', ')}</p>
-          )}
+          {entry.authors?.length > 0 && <p style={{ fontSize: '12px', color: t.textMuted, margin: '4px 0 0' }}>{entry.authors.join(', ')}</p>}
           {entry.abstract && (
             <p style={{ fontSize: '13px', color: t.textMuted, margin: '8px 0 0', lineHeight: '1.5', display: expanded ? 'block' : '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: expanded ? 'visible' : 'hidden' }}>
               {entry.abstract}
@@ -210,11 +228,7 @@ function EntryCard({ entry, theme: t, tagPill, compareMode, selected, onToggleCo
           )}
         </div>
         <div style={{ display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
-          <button
-            onClick={e => { e.stopPropagation(); onAddToNotebook() }}
-            title="Add to Notebook"
-            style={{ background: 'none', border: 'none', color: t.accent, cursor: 'pointer', display: 'flex', padding: '2px' }}
-          >
+          <button onClick={e => { e.stopPropagation(); onAddToNotebook() }} title="Add to Notebook" style={{ background: 'none', border: 'none', color: t.accent, cursor: 'pointer', display: 'flex', padding: '2px' }}>
             <BookOpen size={14} />
           </button>
           {entry.source_url && (
@@ -238,6 +252,119 @@ function EntryCard({ entry, theme: t, tagPill, compareMode, selected, onToggleCo
   )
 }
 
+/* ── Grid card ──────────────────────────────────────────── */
+function GridCard({ entry, theme: t, tagPill, compareMode, selected, onToggleCompare, onEdit }) {
+  return (
+    <div onClick={compareMode ? onToggleCompare : onEdit} style={{
+      background: t.surface1, border: `1px solid ${selected ? t.accent : t.border}`,
+      borderRadius: '10px', padding: '14px', cursor: 'pointer',
+      outline: selected ? `1px solid ${t.accent}` : 'none',
+      display: 'flex', flexDirection: 'column', gap: '8px',
+    }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <h3 style={{ fontSize: '13px', fontWeight: '700', color: t.text, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{entry.title}</h3>
+          {entry.year && <span style={{ fontSize: '10px', color: t.textMuted, background: t.surface3, padding: '1px 5px', borderRadius: '4px', flexShrink: 0 }}>{entry.year}</span>}
+        </div>
+        {entry.authors?.length > 0 && (
+          <p style={{ fontSize: '11px', color: t.textMuted, margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.authors.join(', ')}</p>
+        )}
+      </div>
+      {entry.tags?.length > 0 && (
+        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+          {entry.tags.slice(0, 3).map(tag => <span key={tag} style={{ ...tagPill, fontSize: '10px', padding: '1px 6px' }}>#{tag}</span>)}
+          {entry.tags.length > 3 && <span style={{ fontSize: '10px', color: t.textFaint }}>+{entry.tags.length - 3}</span>}
+        </div>
+      )}
+      {entry.source_url && (
+        <a href={entry.source_url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: '11px', color: t.accent, display: 'flex', alignItems: 'center', gap: '3px', textDecoration: 'none', marginTop: 'auto' }}>
+          <ExternalLink size={11} /> Source
+        </a>
+      )}
+    </div>
+  )
+}
+
+/* ── Detail card ────────────────────────────────────────── */
+function DetailCard({ entry, theme: t, tagPill, compareMode, selected, onToggleCompare, onEdit, onAddToNotebook }) {
+  return (
+    <div onClick={compareMode ? onToggleCompare : onEdit} style={{
+      background: t.surface1, border: `1px solid ${selected ? t.accent : t.border}`,
+      borderRadius: '10px', padding: '20px', cursor: 'pointer',
+      outline: selected ? `1px solid ${t.accent}` : 'none',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '700', color: t.text, margin: 0 }}>{entry.title}</h3>
+            {entry.year && <span style={{ fontSize: '11px', color: t.textMuted, background: t.surface3, padding: '1px 6px', borderRadius: '4px' }}>{entry.year}</span>}
+          </div>
+          {entry.authors?.length > 0 && <p style={{ fontSize: '12px', color: t.textMuted, margin: '4px 0 0' }}>{entry.authors.join(', ')}</p>}
+        </div>
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+          <button onClick={e => { e.stopPropagation(); onAddToNotebook() }} title="Add to Notebook" style={{ background: 'none', border: 'none', color: t.accent, cursor: 'pointer', display: 'flex', padding: '2px' }}>
+            <BookOpen size={14} />
+          </button>
+          {entry.source_url && (
+            <a href={entry.source_url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: t.accent, display: 'flex', alignItems: 'center' }}>
+              <ExternalLink size={14} />
+            </a>
+          )}
+        </div>
+      </div>
+      {entry.abstract && (
+        <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '12px', marginBottom: '10px' }}>
+          <p style={{ fontSize: '11px', fontWeight: '600', color: t.textFaint, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Abstract</p>
+          <p style={{ fontSize: '13px', color: t.textMuted, lineHeight: '1.7', margin: 0 }}>{entry.abstract}</p>
+        </div>
+      )}
+      {entry.tags?.length > 0 && (
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          {entry.tags.map(tag => <span key={tag} style={tagPill}>#{tag}</span>)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Tag chip input ─────────────────────────────────────── */
+function TagChipInput({ value, onChange, theme: t }) {
+  const chips = Array.isArray(value) ? value : []
+  const [input, setInput] = useState('')
+
+  function addChip(val) {
+    const trimmed = val.trim().toLowerCase()
+    if (!trimmed || chips.includes(trimmed)) { setInput(''); return }
+    onChange([...chips, trimmed])
+    setInput('')
+  }
+
+  function removeChip(chip) { onChange(chips.filter(c => c !== chip)) }
+
+  return (
+    <div style={{ border: `1px solid ${t.border}`, borderRadius: '6px', background: t.surface1, padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+      {chips.map(chip => (
+        <span key={chip} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: t.accentBg, border: `1px solid ${t.accent}40`, borderRadius: '12px', padding: '2px 8px', fontSize: '12px', color: t.accent }}>
+          #{chip}
+          <button onClick={() => removeChip(chip)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.accent, padding: 0, lineHeight: 1, fontSize: '12px' }}>×</button>
+        </span>
+      ))}
+      <input
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addChip(input) }
+          if (e.key === 'Backspace' && !input && chips.length) removeChip(chips[chips.length - 1])
+        }}
+        onBlur={() => { if (input.trim()) addChip(input) }}
+        placeholder={chips.length ? '' : 'Add tag, press Enter'}
+        style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '12px', color: t.text, minWidth: '80px', flex: 1 }}
+      />
+    </div>
+  )
+}
+
+/* ── Add to notebook modal ──────────────────────────────── */
 function AddToNotebookModal({ entry, theme: t, onClose }) {
   const [subjects, setSubjects] = useState([])
   const [selectedSubject, setSelectedSubject] = useState(null)
@@ -261,12 +388,7 @@ function AddToNotebookModal({ entry, theme: t, onClose }) {
         { type: 'paragraph', content: [{ type: 'text', text: entry.abstract || '' }] },
       ]
     }
-    await supabase.from('notes').insert({
-      subject_id: selectedSubject,
-      title: entry.title,
-      content,
-      color: '#818cf8',
-    })
+    await supabase.from('notes').insert({ subject_id: selectedSubject, title: entry.title, content, color: '#818cf8' })
     setSaving(false)
     setDone(true)
     setTimeout(onClose, 1200)
@@ -279,23 +401,15 @@ function AddToNotebookModal({ entry, theme: t, onClose }) {
           <h2 style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>Add to Notebook</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={16} /></button>
         </div>
-
         {done ? (
           <p style={{ color: '#4ade80', fontSize: '14px', textAlign: 'center', padding: '12px 0' }}>✓ Added to notebook!</p>
         ) : (
           <>
-            <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '14px' }}>
-              Pick a subject — a note will be created with the citation and abstract pre-filled.
-            </p>
+            <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '14px' }}>Pick a subject — a note will be created with the citation and abstract pre-filled.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', maxHeight: '220px', overflowY: 'auto' }}>
               {subjects.length === 0 && <p style={{ fontSize: '12px', color: t.textFaint }}>No subjects yet. Create one in Notebook first.</p>}
               {subjects.map(s => (
-                <div key={s.id} onClick={() => setSelectedSubject(s.id)} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
-                  borderRadius: '8px', cursor: 'pointer',
-                  background: selectedSubject === s.id ? t.accentBg : t.surface1,
-                  border: `1px solid ${selectedSubject === s.id ? t.accent : t.border}`,
-                }}>
+                <div key={s.id} onClick={() => setSelectedSubject(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', background: selectedSubject === s.id ? t.accentBg : t.surface1, border: `1px solid ${selectedSubject === s.id ? t.accent : t.border}` }}>
                   <span style={{ fontSize: '16px' }}>{s.icon}</span>
                   <span style={{ fontSize: '13px', color: selectedSubject === s.id ? t.accent : t.textMuted }}>{s.name}</span>
                   <div style={{ marginLeft: 'auto', width: '8px', height: '8px', borderRadius: '50%', background: s.color }} />
@@ -303,15 +417,10 @@ function AddToNotebookModal({ entry, theme: t, onClose }) {
               ))}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={addToNotebook} disabled={!selectedSubject || saving} style={{
-                flex: 1, background: selectedSubject ? t.accentBtn : t.border, border: 'none', borderRadius: '8px',
-                padding: '9px', color: 'white', fontSize: '13px', cursor: selectedSubject ? 'pointer' : 'not-allowed', fontWeight: '500',
-              }}>
+              <button onClick={addToNotebook} disabled={!selectedSubject || saving} style={{ flex: 1, background: selectedSubject ? t.accentBtn : t.border, border: 'none', borderRadius: '8px', padding: '9px', color: 'white', fontSize: '13px', cursor: selectedSubject ? 'pointer' : 'not-allowed', fontWeight: '500' }}>
                 {saving ? 'Adding...' : 'Add to Notebook'}
               </button>
-              <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '9px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer' }}>
-                Cancel
-              </button>
+              <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '9px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
             </div>
           </>
         )}
@@ -320,6 +429,7 @@ function AddToNotebookModal({ entry, theme: t, onClose }) {
   )
 }
 
+/* ── Entry modal ────────────────────────────────────────── */
 function EntryModal({ entry, theme: t, onClose, onSaved, onDelete }) {
   const isEdit = !!entry
   const [form, setForm] = useState({
@@ -328,7 +438,7 @@ function EntryModal({ entry, theme: t, onClose, onSaved, onDelete }) {
     abstract: entry?.abstract || '',
     year: entry?.year || '',
     source_url: entry?.source_url || '',
-    tags: entry?.tags?.join(', ') || '',
+    tags: entry?.tags || [],
   })
   const [saving, setSaving] = useState(false)
 
@@ -343,7 +453,7 @@ function EntryModal({ entry, theme: t, onClose, onSaved, onDelete }) {
       abstract: form.abstract.trim(),
       year: form.year ? parseInt(form.year) : null,
       source_url: form.source_url.trim(),
-      tags: form.tags ? form.tags.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean) : [],
+      tags: form.tags,
     }
     if (isEdit) {
       const { data } = await supabase.from('rrl_entries').update(payload).eq('id', entry.id).select().single()
@@ -367,21 +477,32 @@ function EntryModal({ entry, theme: t, onClose, onSaved, onDelete }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <MField label="Title *" value={form.title} onChange={v => set('title', v)} placeholder="Paper or article title" mInput={mInput} mLabel={mLabel} />
-          <MField label="Authors (comma separated)" value={form.authors} onChange={v => set('authors', v)} placeholder="Juan dela Cruz, Maria Santos" mInput={mInput} mLabel={mLabel} />
+          <div style={{ flex: 1 }}>
+            <label style={mLabel}>Title *</label>
+            <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Paper or article title" style={{ ...mInput, marginTop: '6px' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={mLabel}>Authors (comma separated)</label>
+            <input value={form.authors} onChange={e => set('authors', e.target.value)} placeholder="Juan dela Cruz, Maria Santos" style={{ ...mInput, marginTop: '6px' }} />
+          </div>
           <div>
             <label style={mLabel}>Abstract</label>
             <textarea value={form.abstract} onChange={e => set('abstract', e.target.value)} placeholder="Paste the abstract here..." rows={5} style={{ ...mInput, resize: 'vertical', marginTop: '6px' }} />
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <MField label="Year" value={form.year} onChange={v => set('year', v)} placeholder="2024" type="number" mInput={mInput} mLabel={mLabel} />
-            <MField label="Source URL" value={form.source_url} onChange={v => set('source_url', v)} placeholder="https://..." mInput={mInput} mLabel={mLabel} />
+            <div style={{ flex: 1 }}>
+              <label style={mLabel}>Year</label>
+              <input type="number" value={form.year} onChange={e => set('year', e.target.value)} placeholder="2024" style={{ ...mInput, marginTop: '6px' }} />
+            </div>
+            <div style={{ flex: 2 }}>
+              <label style={mLabel}>Source URL</label>
+              <input value={form.source_url} onChange={e => set('source_url', e.target.value)} placeholder="https://..." style={{ ...mInput, marginTop: '6px' }} />
+            </div>
           </div>
           <div>
-            <label style={mLabel}>Tags (comma separated)</label>
-            <div style={{ position: 'relative', marginTop: '6px' }}>
-              <Tag size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: t.textFaint }} />
-              <input value={form.tags} onChange={e => set('tags', e.target.value)} placeholder="methodology, qualitative, education" style={{ ...mInput, paddingLeft: '30px' }} />
+            <label style={mLabel}>Tags</label>
+            <div style={{ marginTop: '6px' }}>
+              <TagChipInput value={form.tags} onChange={v => set('tags', v)} theme={t} />
             </div>
           </div>
         </div>
@@ -396,15 +517,6 @@ function EntryModal({ entry, theme: t, onClose, onSaved, onDelete }) {
           <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function MField({ label, value, onChange, placeholder, type = 'text', mInput, mLabel }) {
-  return (
-    <div style={{ flex: 1 }}>
-      <label style={mLabel}>{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...mInput, marginTop: '6px' }} />
     </div>
   )
 }
