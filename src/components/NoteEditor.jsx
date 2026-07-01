@@ -1,14 +1,48 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useEditor, EditorContent, Extension } from '@tiptap/react'
+import { useEditor, EditorContent, Extension, Node, mergeAttributes } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
 import Highlight from '@tiptap/extension-highlight'
 import { TextStyle } from '@tiptap/extension-text-style'
+import Image from '@tiptap/extension-image'
 import { supabase } from '../lib/supabase'
 import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, StickyNote, Highlighter } from 'lucide-react'
 import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
+
+// Custom iframe node for video + widget embeds
+const IframeNode = Node.create({
+  name: 'iframe',
+  group: 'block',
+  atom: true,
+  addAttributes() {
+    return {
+      src: { default: null },
+      height: { default: '360' },
+      type: { default: 'embed' }, // 'video' | 'widget'
+    }
+  },
+  parseHTML() { return [{ tag: 'iframe' }] },
+  renderHTML({ HTMLAttributes }) {
+    return ['iframe', mergeAttributes(HTMLAttributes, {
+      frameborder: '0', allowfullscreen: 'true',
+      style: 'width:100%;border-radius:8px;display:block;',
+    })]
+  },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement('div')
+      dom.style.cssText = 'margin:12px 0;border-radius:8px;overflow:hidden;'
+      const iframe = document.createElement('iframe')
+      iframe.src = node.attrs.src
+      iframe.style.cssText = `width:100%;height:${node.attrs.height}px;border:none;border-radius:8px;display:block;`
+      iframe.allowFullscreen = true
+      dom.appendChild(iframe)
+      return { dom }
+    }
+  },
+})
 
 const SAVE_DELAY = 1000
 
@@ -22,12 +56,19 @@ const HIGHLIGHT_COLORS = [
 ]
 
 const SLASH_COMMANDS = [
+  // Text
   { label: 'Text', description: 'Plain paragraph', icon: '¶', action: (ed) => ed.chain().focus().setParagraph().run() },
   { label: 'Heading', description: 'Large section title', icon: 'H', action: (ed) => ed.chain().focus().toggleHeading({ level: 2 }).run() },
+  { label: 'Quote', description: 'Block quotation', icon: '"', action: (ed) => ed.chain().focus().toggleBlockquote().run() },
+  { label: 'Code', description: 'Code block', icon: '</>', action: (ed) => ed.chain().focus().toggleCodeBlock().run() },
+  // Lists
   { label: 'Bullet List', description: 'Unordered list', icon: '•', action: (ed) => ed.chain().focus().toggleBulletList().run() },
   { label: 'Numbered List', description: 'Ordered list', icon: '1.', action: (ed) => ed.chain().focus().toggleOrderedList().run() },
   { label: 'Checklist', description: 'Task items', icon: '☐', action: (ed) => ed.chain().focus().toggleTaskList().run() },
-  { label: 'Quote', description: 'Block quotation', icon: '"', action: (ed) => ed.chain().focus().toggleBlockquote().run() },
+  // Media — actions are strings, handled specially in runSlashCommand
+  { label: 'Image', description: 'Upload or paste image URL', icon: '🖼️', action: '__image__' },
+  { label: 'Video', description: 'Embed YouTube or video URL', icon: '▶️', action: '__video__' },
+  { label: 'Widget', description: 'Embed any iframe URL', icon: '</>', action: '__widget__' },
 ]
 
 export default function NoteEditor({ note, onSave, theme = {} }) {
@@ -53,9 +94,14 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
   // Slash command state
   const [slashMenu, setSlashMenu] = useState(null) // {x, y, query, from}
   const [slashIndex, setSlashIndex] = useState(0)
+  // Media embed modal
+  const [embedModal, setEmbedModal] = useState(null) // {type: 'image'|'video'|'widget'}
+  const [embedUrl, setEmbedUrl] = useState('')
+  const [embedUploading, setEmbedUploading] = useState(false)
 
   const editorWrapRef = useRef(null)
   const saveTimer = useRef(null)
+  const imageInputRef = useRef(null)
 
   // Custom slash command extension
   const SlashExtension = Extension.create({
@@ -86,6 +132,8 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
       Link.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' } }),
       Highlight.configure({ multicolor: true }),
       TextStyle,
+      Image.configure({ inline: false, allowBase64: false }),
+      IframeNode,
       SlashExtension,
     ],
     content: note.content || {},
@@ -155,13 +203,52 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
 
   function runSlashCommand(cmd) {
     if (!editor || !slashMenu) return
-    // Delete the /query text first
     const { from } = editor.state.selection
     editor.chain().focus()
       .deleteRange({ from: slashMenu.from, to: from })
       .run()
-    cmd.action(editor)
     setSlashMenu(null)
+
+    if (cmd.action === '__image__') {
+      setEmbedModal({ type: 'image' }); setEmbedUrl('')
+    } else if (cmd.action === '__video__') {
+      setEmbedModal({ type: 'video' }); setEmbedUrl('')
+    } else if (cmd.action === '__widget__') {
+      setEmbedModal({ type: 'widget' }); setEmbedUrl('')
+    } else {
+      cmd.action(editor)
+    }
+  }
+
+  async function uploadImageFile(file) {
+    if (!file) return
+    setEmbedUploading(true)
+    const ext = file.name.split('.').pop()
+    const path = `note-images/${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('covers').upload(path, file, { upsert: true })
+    if (!error) {
+      const { data } = supabase.storage.from('covers').getPublicUrl(path)
+      editor.chain().focus().setImage({ src: data.publicUrl }).run()
+      setEmbedModal(null)
+    }
+    setEmbedUploading(false)
+  }
+
+  function insertEmbed() {
+    const url = embedUrl.trim()
+    if (!url) return
+    if (embedModal.type === 'image') {
+      editor.chain().focus().setImage({ src: url }).run()
+    } else if (embedModal.type === 'video') {
+      // Convert YouTube watch URLs to embed
+      const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/)
+      const src = ytMatch ? `https://www.youtube.com/embed/${ytMatch[1]}` : url
+      editor.chain().focus().insertContent({ type: 'iframe', attrs: { src, height: '360', type: 'video' } }).run()
+    } else {
+      editor.chain().focus().insertContent({ type: 'iframe', attrs: { src: url, height: '480', type: 'widget' } }).run()
+    }
+    setEmbedModal(null)
+    setEmbedUrl('')
   }
 
   // Load sidenotes
@@ -438,6 +525,52 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
         </div>
       )}
 
+      {/* Hidden image file input */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={e => uploadImageFile(e.target.files[0])}
+      />
+
+      {/* Embed modal */}
+      {embedModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
+          onClick={() => setEmbedModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: theme.surface2, border: `1px solid ${borderColor}`, borderRadius: '12px', padding: '24px', width: '420px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: '700', color: theme.text }}>
+              {embedModal.type === 'image' ? '🖼️ Insert Image' : embedModal.type === 'video' ? '▶️ Embed Video' : '</> Embed Widget'}
+            </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '12px', color: theme.textMuted }}>
+              {embedModal.type === 'image' ? 'Upload a file or paste an image URL' : embedModal.type === 'video' ? 'Paste a YouTube or video URL' : 'Paste any embeddable iframe URL (e.g. potion.so widget)'}
+            </p>
+
+            {embedModal.type === 'image' && (
+              <button
+                onClick={() => imageInputRef.current?.click()}
+                disabled={embedUploading}
+                style={{ display: 'block', width: '100%', padding: '10px', marginBottom: '12px', background: theme.surface3, border: `1px dashed ${borderColor}`, borderRadius: '8px', color: theme.textMuted, cursor: 'pointer', fontSize: '13px' }}
+              >
+                {embedUploading ? 'Uploading...' : '📁 Upload from device'}
+              </button>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                autoFocus
+                value={embedUrl}
+                onChange={e => setEmbedUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') insertEmbed(); if (e.key === 'Escape') setEmbedModal(null) }}
+                placeholder={embedModal.type === 'image' ? 'https://example.com/image.png' : embedModal.type === 'video' ? 'https://youtube.com/watch?v=...' : 'https://widgets.potion.so/...'}
+                style={{ flex: 1, background: theme.surface1, border: `1px solid ${borderColor}`, borderRadius: '8px', padding: '8px 12px', color: theme.text, fontSize: '13px', outline: 'none' }}
+              />
+              <button onClick={insertEmbed} style={{ background: theme.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500' }}>Insert</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Title */}
       <input
         value={title}
@@ -640,5 +773,9 @@ function getEditorCSS(text, heading, placeholder, marker) {
 .tiptap a { color: ${marker}; text-decoration: underline; cursor: pointer; }
 .tiptap a:hover { opacity: 0.8; }
 .tiptap mark { border-radius: 3px; padding: 0 2px; }
+.tiptap img { max-width: 100%; border-radius: 8px; margin: 12px 0; display: block; }
+.tiptap pre { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 14px 16px; margin: 12px 0; overflow-x: auto; }
+.tiptap pre code { color: #e2e8f0; font-size: 13px; font-family: 'JetBrains Mono', 'Fira Code', monospace; background: none; padding: 0; }
+.tiptap blockquote { border-left: 3px solid ${marker}; padding-left: 14px; margin: 12px 0; color: ${marker}; font-style: italic; }
 `
 }
