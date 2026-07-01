@@ -18,6 +18,7 @@ const STATUS_COLORS = {
 export default function Books() {
   const [books, setBooks] = useState([])
   const [filter, setFilter] = useState('all')
+  const [genreFilter, setGenreFilter] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [editBook, setEditBook] = useState(null)
 
@@ -28,7 +29,13 @@ export default function Books() {
     if (data) setBooks(data)
   }
 
-  const filtered = filter === 'all' ? books : books.filter(b => b.status === filter)
+  const genres = ['all', ...new Set(books.map(b => b.genre).filter(Boolean).map(g => g.trim()).filter(g => g !== ''))]
+
+  const filtered = books.filter(b => {
+    const matchStatus = filter === 'all' || b.status === filter
+    const matchGenre = genreFilter === 'all' || (b.genre || '').toLowerCase() === genreFilter.toLowerCase()
+    return matchStatus && matchGenre
+  })
 
   function openAdd() { setEditBook(null); setShowModal(true) }
   function openEdit(book) { setEditBook(book); setShowModal(true) }
@@ -73,6 +80,27 @@ export default function Books() {
           </button>
         ))}
       </div>
+
+      {/* Genre tabs — auto-generated from book genres */}
+      {genres.length > 1 && (
+        <div style={{ padding: '10px 28px 0', display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
+          {genres.map(g => (
+            <button
+              key={g}
+              onClick={() => setGenreFilter(g)}
+              style={{
+                padding: '4px 12px', borderRadius: '20px', border: '1px solid',
+                cursor: 'pointer', fontSize: '12px', fontWeight: '500', transition: 'all 0.15s',
+                background: genreFilter === g ? 'rgba(192,132,252,0.15)' : 'transparent',
+                borderColor: genreFilter === g ? '#c084fc' : '#2a2a35',
+                color: genreFilter === g ? '#c084fc' : '#6b7280',
+              }}
+            >
+              {g === 'all' ? 'All genres' : g}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Book grid */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
