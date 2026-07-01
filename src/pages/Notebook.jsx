@@ -27,7 +27,6 @@ export default function Notebook({ theme = {} }) {
   const [subjectsCollapsed, setSubjectsCollapsed] = useState(false)
   const [notesCollapsed, setNotesCollapsed] = useState(false)
   const [subjectMenu, setSubjectMenu] = useState(null) // id of subject with open menu
-  const [subjectHexInput, setSubjectHexInput] = useState('')
   const [noteMenu, setNoteMenu] = useState(null)       // id of note with open menu
   const [renamingSubject, setRenamingSubject] = useState(null)
   const [renamingNote, setRenamingNote] = useState(null)
@@ -191,15 +190,11 @@ export default function Notebook({ theme = {} }) {
                           ))}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px' }}>
-                          <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: s.color, flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }} />
-                          <input
-                            defaultValue=""
-                            placeholder={s.color}
-                            onChange={e => {
-                              if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setSubjectColor(s.id, e.target.value)
-                            }}
-                            style={{ ...inlineInput(inputBg, borderColor, textActive), fontSize: '11px', padding: '3px 6px', fontFamily: 'monospace' }}
-                          />
+                          <label title="Custom color" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: s.color, border: '1px solid rgba(255,255,255,0.2)' }} />
+                            <span style={{ fontSize: '10px', color: textMuted, fontFamily: 'monospace' }}>{s.color}</span>
+                            <input type="color" value={s.color} onChange={e => setSubjectColor(s.id, e.target.value)} style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
+                          </label>
                         </div>
                       </div>
                       <button onClick={() => { deleteSubject(s.id); setSubjectMenu(null) }} style={{ ...menuItem(textActive), color: '#ef4444', borderTop: `1px solid ${borderColor}` }}>
@@ -221,23 +216,18 @@ export default function Notebook({ theme = {} }) {
                 />
                 <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap' }}>
                   {COLORS.map(c => (
-                    <div key={c} onClick={() => { setNewSubjectColor(c); setSubjectHexInput('') }} style={{
+                    <div key={c} onClick={() => setNewSubjectColor(c)} style={{
                       width: '16px', height: '16px', borderRadius: '50%', background: c, cursor: 'pointer',
                       outline: newSubjectColor === c ? '2px solid white' : 'none', outlineOffset: '1px',
                     }} />
                   ))}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: newSubjectColor, flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }} />
-                  <input
-                    value={subjectHexInput}
-                    onChange={e => {
-                      setSubjectHexInput(e.target.value)
-                      if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setNewSubjectColor(e.target.value)
-                    }}
-                    placeholder={newSubjectColor}
-                    style={{ ...inlineInput(inputBg, borderColor, textActive), fontSize: '11px', padding: '3px 6px', fontFamily: 'monospace' }}
-                  />
+                  <label title="Custom color" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: newSubjectColor, border: '1px solid rgba(255,255,255,0.2)' }} />
+                    <span style={{ fontSize: '10px', color: textMuted, fontFamily: 'monospace' }}>{newSubjectColor}</span>
+                    <input type="color" value={newSubjectColor} onChange={e => setNewSubjectColor(e.target.value)} style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
+                  </label>
                 </div>
                 <div style={{ display: 'flex', gap: '3px', marginTop: '6px', flexWrap: 'wrap' }}>
                   {ICONS.map(ic => (
