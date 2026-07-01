@@ -119,7 +119,7 @@ export default function Notebook({ theme = {} }) {
       <div style={{
         width: subjectsCollapsed ? '36px' : '200px', background: panelBg1,
         borderRight: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column',
-        flexShrink: 0, transition: 'width 0.2s ease', overflow: 'hidden',
+        flexShrink: 0, transition: 'width 0.2s ease', overflow: 'hidden', position: 'relative', zIndex: 10,
       }}>
         <div style={{ padding: '12px 8px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           {!subjectsCollapsed && (
@@ -207,7 +207,7 @@ export default function Notebook({ theme = {} }) {
             </div>
 
             {showNewSubject && (
-              <div style={{ padding: '10px 8px', borderTop: `1px solid ${borderColor}` }}>
+              <div style={{ padding: '10px 8px', borderTop: `1px solid ${borderColor}`, flexShrink: 0, overflowY: 'auto', maxHeight: '55vh' }}>
                 <input autoFocus value={newSubjectName}
                   onChange={e => setNewSubjectName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') createSubject(); if (e.key === 'Escape') setShowNewSubject(false) }}
