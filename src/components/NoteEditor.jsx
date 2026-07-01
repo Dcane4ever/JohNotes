@@ -66,7 +66,10 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
           const { state } = this.editor
           const { from } = state.selection
           const coords = this.editor.view.coordsAtPos(from)
-          setSlashMenu({ x: coords.left, y: coords.bottom + 4, query: '', from })
+          const menuHeight = 300
+          const spaceBelow = window.innerHeight - coords.bottom
+          const y = spaceBelow < menuHeight ? coords.top - menuHeight - 4 : coords.bottom + 4
+          setSlashMenu({ x: coords.left, y, query: '', from })
           setSlashIndex(0)
           return false // let / be inserted
         },
@@ -404,12 +407,12 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
           onMouseDown={e => e.stopPropagation()}
           style={{
             position: 'fixed', left: slashMenu.x, top: slashMenu.y,
-            background: toolbarBg, border: `1px solid ${borderColor}`,
+            background: theme.surface1 || toolbarBg, border: `1px solid ${borderColor}`,
             borderRadius: '10px', padding: '4px', zIndex: 9999,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: '220px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)', minWidth: '240px',
           }}
         >
-          <p style={{ fontSize: '10px', color: theme.textFaint, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 8px 2px', margin: 0 }}>Insert block</p>
+          <p style={{ fontSize: '10px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 4px', margin: 0 }}>Insert block</p>
           {filteredSlash.map((cmd, i) => (
             <div
               key={cmd.label}
@@ -428,7 +431,7 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
               }}>{cmd.icon}</span>
               <div>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: '500', color: theme.text }}>{cmd.label}</p>
-                <p style={{ margin: 0, fontSize: '11px', color: theme.textFaint }}>{cmd.description}</p>
+                <p style={{ margin: 0, fontSize: '11px', color: theme.textMuted }}>{cmd.description}</p>
               </div>
             </div>
           ))}
