@@ -7,7 +7,7 @@ import Highlight from '@tiptap/extension-highlight'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Image from '@tiptap/extension-image'
 import { supabase } from '../lib/supabase'
-import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, StickyNote, Highlighter } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, StickyNote, Highlighter, BookOpen } from 'lucide-react'
 import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 
@@ -71,7 +71,7 @@ const SLASH_COMMANDS = [
   { label: 'Widget', description: 'Embed any iframe URL', icon: '</>', action: '__widget__' },
 ]
 
-export default function NoteEditor({ note, onSave, theme = {} }) {
+export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) {
   const toolbarBg = theme.surface2 || '#16161e'
   const borderColor = theme.border || '#2a2a35'
   const titleColor = theme.text || '#e2e2e7'
@@ -84,6 +84,10 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
 
   const [title, setTitle] = useState(note.title || '')
   const [saveStatus, setSaveStatus] = useState('saved')
+  const [showToc, setShowToc] = useState(false)
+  const [tocHeadings, setTocHeadings] = useState([])
+  const [showNoteLinkPicker, setShowNoteLinkPicker] = useState(false)
+  const [noteLinkQuery, setNoteLinkQuery] = useState('')
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [bubble, setBubble] = useState(null) // {x, y, hasLink}
@@ -131,7 +135,7 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
       Placeholder.configure({ placeholder: "Start writing... type '/' for commands" }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Link.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' } }),
+      Link.configure({ openOnClick: true, HTMLAttributes: { rel: 'noopener noreferrer' } }),
       Highlight.configure({ multicolor: true }),
       TextStyle,
       Image.configure({ inline: false, allowBase64: false }),
@@ -143,6 +147,15 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
       setSaveStatus('unsaved')
       clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(saveContent, SAVE_DELAY)
+
+      // Extract headings for TOC
+      const headings = []
+      ed.state.doc.forEach((node, offset) => {
+        if (node.type.name === 'heading') {
+          headings.push({ text: node.textContent, pos: offset })
+        }
+      })
+      setTocHeadings(headings)
 
       // Update slash menu query based on text after /
       if (slashMenu) {
@@ -407,6 +420,54 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
           {editor.isActive('link') ? <Link2Off size={14} /> : <Link2 size={14} />}
         </ToolBtn>
         <div style={{ flex: 1 }} />
+        {/* Note-to-note link button */}
+        <div style={{ position: 'relative' }}>
+          <ToolBtn onClick={() => { setShowNoteLinkPicker(p => !p); setNoteLinkQuery('') }} active={showNoteLinkPicker} title="Link to note" theme={theme}>
+            <BookOpen size={14} />
+          </ToolBtn>
+          {showNoteLinkPicker && (
+            <div onMouseDown={e => e.stopPropagation()} style={{
+              position: 'absolute', top: '34px', right: 0, zIndex: 9999,
+              background: toolbarBg, border: `1px solid ${borderColor}`, borderRadius: '10px',
+              padding: '8px', minWidth: '220px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}>
+              <p style={{ fontSize: '10px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px' }}>Link to note</p>
+              <input
+                autoFocus
+                value={noteLinkQuery}
+                onChange={e => setNoteLinkQuery(e.target.value)}
+                placeholder="Search notes..."
+                style={{ width: '100%', boxSizing: 'border-box', background: theme.surface1, border: `1px solid ${borderColor}`, borderRadius: '6px', padding: '5px 8px', color: theme.text, fontSize: '12px', outline: 'none', marginBottom: '6px' }}
+              />
+              <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {allNotes.filter(n => n.id !== note.id && (!noteLinkQuery || n.title?.toLowerCase().includes(noteLinkQuery.toLowerCase()))).map(n => (
+                  <button key={n.id} onMouseDown={e => {
+                    e.preventDefault()
+                    const href = `ameno://note/${n.id}`
+                    const selectedText = editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to).trim()
+                    const text = selectedText || n.title || 'Note'
+                    editor.chain().focus().insertContent(`<a href="${href}">${text}</a>`).run()
+                    setShowNoteLinkPicker(false)
+                  }} style={{ background: 'none', border: 'none', borderRadius: '6px', padding: '6px 8px', textAlign: 'left', cursor: 'pointer', fontSize: '12px', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px' }}
+                    onMouseEnter={e => e.currentTarget.style.background = theme.accentBg}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <BookOpen size={11} style={{ color: theme.accent, flexShrink: 0 }} />
+                    {n.title || 'Untitled'}
+                  </button>
+                ))}
+                {allNotes.filter(n => n.id !== note.id && (!noteLinkQuery || n.title?.toLowerCase().includes(noteLinkQuery.toLowerCase()))).length === 0 && (
+                  <p style={{ fontSize: '11px', color: theme.textFaint, padding: '4px 8px' }}>No notes found</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        {/* TOC toggle */}
+        <ToolBtn onClick={() => setShowToc(p => !p)} active={showToc} title="Table of contents" theme={theme}>
+          <List size={14} />
+        </ToolBtn>
+        <div style={{ width: '1px', height: '20px', background: dividerColor, margin: '0 4px' }} />
         <span style={{ fontSize: '11px', color: saveStatus === 'saved' ? (isDark ? '#4b5563' : '#9ca3af') : '#facc15' }}>
           {saveStatus === 'saved' ? 'Saved' : 'Saving...'}
         </span>
@@ -628,6 +689,44 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
           padding: '24px 32px 8px', width: '100%', boxSizing: 'border-box',
         }}
       />
+
+      {/* TOC panel */}
+      {showToc && (
+        <div style={{
+          position: 'absolute', right: '196px', top: '48px', zIndex: 100,
+          background: toolbarBg, border: `1px solid ${borderColor}`, borderRadius: '10px',
+          padding: '12px', minWidth: '200px', maxWidth: '260px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)', maxHeight: '60vh', overflowY: 'auto',
+        }}>
+          <p style={{ fontSize: '10px', fontWeight: '600', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 8px' }}>Table of Contents</p>
+          {tocHeadings.length === 0 ? (
+            <p style={{ fontSize: '12px', color: theme.textFaint }}>No headings yet. Add H2 headers.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {tocHeadings.map((h, i) => (
+                <button key={i} onClick={() => {
+                  editor.commands.focus()
+                  editor.commands.setTextSelection(h.pos + 1)
+                  // scroll to heading DOM
+                  const headingEls = editorWrapRef.current?.querySelectorAll('.tiptap h2')
+                  if (headingEls?.[i]) headingEls[i].scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  setShowToc(false)
+                }} style={{
+                  background: 'none', border: 'none', borderRadius: '6px', padding: '5px 8px',
+                  textAlign: 'left', cursor: 'pointer', fontSize: '13px', color: theme.text,
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = theme.accentBg}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <span style={{ fontSize: '10px', color: theme.accent, fontWeight: '700' }}>H2</span>
+                  {h.text}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Editor + sidenotes layout */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative' }}>
