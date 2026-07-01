@@ -41,8 +41,7 @@ export default function Schedule() {
   }
 
   function onSaved(event, isNew) {
-    if (isNew) setEvents(prev => [...prev, event])
-    else setEvents(prev => prev.map(e => e.id === event.id ? event : e))
+    setEvents(prev => isNew ? [...prev, event] : prev.map(e => e.id === event.id ? event : e))
     setShowModal(false)
   }
 
@@ -52,9 +51,15 @@ export default function Schedule() {
     setShowModal(false)
   }
 
+  function openDay(day) {
+    const dayEvents = getEventsForDay(day)
+    setDayDetail({ day, events: dayEvents })
+  }
+
   function openAdd(date) {
     setEditEvent(null)
     setSelectedDate(date)
+    setDayDetail(null)
     setShowModal(true)
   }
 
@@ -62,6 +67,7 @@ export default function Schedule() {
     e.stopPropagation()
     setEditEvent(event)
     setSelectedDate(null)
+    setDayDetail(null)
     setShowModal(true)
   }
 
@@ -135,7 +141,7 @@ export default function Schedule() {
           return (
             <div
               key={i}
-              onClick={() => day && openAdd(new Date(year, month, day))}
+              onClick={() => day && openDay(day)}
               style={{
                 background: isToday(day) ? 'rgba(192,132,252,0.08)' : day ? '#12121a' : 'transparent',
                 border: isToday(day) ? '1px solid #c084fc' : '1px solid #1e1e2a',
@@ -149,22 +155,19 @@ export default function Schedule() {
                   {dayEvents.slice(0, 3).map(ev => (
                     <div
                       key={ev.id}
-                      onClick={(e) => openEdit(ev, e)}
                       style={{
                         background: ev.color || '#7c3aed', borderRadius: '3px',
                         padding: '1px 4px', fontSize: '10px', color: 'white',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        cursor: 'pointer',
                       }}
                     >
                       {ev.start_time ? new Date(ev.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' : ''}{ev.title}
                     </div>
                   ))}
                   {dayEvents.length > 3 && (
-                    <span
-                      onClick={e => { e.stopPropagation(); setDayDetail({ day, events: dayEvents }) }}
-                      style={{ fontSize: '9px', color: '#c084fc', cursor: 'pointer', fontWeight: '600' }}
-                    >+{dayEvents.length - 3} more</span>
+                    <span style={{ fontSize: '9px', color: '#c084fc', fontWeight: '600' }}>
+                      +{dayEvents.length - 3} more
+                    </span>
                   )}
                 </>
               )}
@@ -185,18 +188,21 @@ export default function Schedule() {
               <button onClick={() => setDayDetail(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {dayDetail.events.length === 0 && (
+                <p style={{ fontSize: '13px', color: '#4b5563', textAlign: 'center', padding: '20px 0' }}>No events this day</p>
+              )}
               {dayDetail.events.map(ev => (
                 <div
                   key={ev.id}
-                  onClick={() => { setDayDetail(null); openEdit(ev, { stopPropagation: () => {} }) }}
+                  onClick={() => openEdit(ev, { stopPropagation: () => {} })}
                   style={{
-                    background: ev.color || '#7c3aed', borderRadius: '6px',
-                    padding: '8px 12px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
+                    background: ev.color || '#7c3aed', borderRadius: '8px',
+                    padding: '10px 14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '3px',
                   }}
                 >
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: 'white' }}>{ev.title}</span>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: 'white' }}>{ev.title}</span>
                   {ev.start_time && (
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)' }}>
+                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>
                       {new Date(ev.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
@@ -205,7 +211,7 @@ export default function Schedule() {
               ))}
             </div>
             <button
-              onClick={() => { setDayDetail(null); openAdd(new Date(year, month, dayDetail.day)) }}
+              onClick={() => openAdd(new Date(year, month, dayDetail.day))}
               style={{ ...primaryBtn, width: '100%', justifyContent: 'center', marginTop: '14px' }}
             >
               <Plus size={14} /> Add Event
