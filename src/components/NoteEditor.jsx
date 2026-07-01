@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
@@ -142,6 +142,34 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
           <button onClick={() => { setShowLinkInput(false); setLinkUrl('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted, fontSize: '12px' }}>✕</button>
         </div>
       )}
+
+      {/* Bubble menu on text selection */}
+      <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+        <div style={{
+          background: toolbarBg, border: `1px solid ${borderColor}`,
+          borderRadius: '8px', padding: '4px 6px', display: 'flex', gap: '2px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        }}>
+          <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold" isDark={isDark}><Bold size={13} /></ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic" isDark={isDark}><Italic size={13} /></ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="Strike" isDark={isDark}><Strikethrough size={13} /></ToolBtn>
+          <div style={{ width: '1px', height: '18px', background: borderColor, margin: '0 2px', alignSelf: 'center' }} />
+          <ToolBtn
+            onClick={() => {
+              if (editor.isActive('link')) {
+                editor.chain().focus().unsetLink().run()
+              } else {
+                setLinkUrl(editor.getAttributes('link').href || '')
+                setShowLinkInput(true)
+              }
+            }}
+            active={editor.isActive('link')} title={editor.isActive('link') ? 'Remove link' : 'Make hyperlink'} isDark={isDark}>
+            {editor.isActive('link') ? <Link2Off size={13} /> : <Link2 size={13} />}
+          </ToolBtn>
+          {!editor.isActive('link') && <span style={{ fontSize: '11px', color: theme.textMuted, alignSelf: 'center', paddingRight: '4px' }}>Link</span>}
+          {editor.isActive('link') && <span style={{ fontSize: '11px', color: '#ef4444', alignSelf: 'center', paddingRight: '4px' }}>Remove</span>}
+        </div>
+      </BubbleMenu>
 
       {/* Title */}
       <input
