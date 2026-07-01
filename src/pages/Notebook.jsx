@@ -18,6 +18,7 @@ export default function Notebook({ theme = {} }) {
 
   const [subjects, setSubjects] = useState([])
   const [notes, setNotes] = useState([])
+  const [allNotes, setAllNotes] = useState([])
   const [activeSubject, setActiveSubject] = useState(null)
   const [activeNote, setActiveNote] = useState(null)
   const [restored, setRestored] = useState(false)
@@ -36,7 +37,7 @@ export default function Notebook({ theme = {} }) {
   // Right-click context menu
   const [ctxMenu, setCtxMenu] = useState(null) // {x, y, note}
 
-  useEffect(() => { fetchSubjects() }, [])
+  useEffect(() => { fetchSubjects(); fetchAllNotes() }, [])
   useEffect(() => {
     if (activeSubject) {
       fetchNotes(activeSubject.id)
@@ -82,6 +83,11 @@ export default function Notebook({ theme = {} }) {
       if (subjectNotes) setNotes(subjectNotes)
     }
     setActiveNote(note)
+  }
+
+  async function fetchAllNotes() {
+    const { data } = await supabase.from('notes').select('id, title, subject_id').order('updated_at', { ascending: false })
+    if (data) setAllNotes(data)
   }
 
   async function fetchSubjects() {
@@ -401,7 +407,7 @@ export default function Notebook({ theme = {} }) {
       {/* Editor */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, position: 'relative' }}>
         {activeNote ? (
-          <NoteEditor key={activeNote.id} note={activeNote} onSave={onNoteSaved} theme={theme} allNotes={notes} />
+          <NoteEditor key={activeNote.id} note={activeNote} onSave={onNoteSaved} theme={theme} allNotes={allNotes} />
         ) : (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: '#4b5563', pointerEvents: 'none' }}>
             <ChevronRight size={32} />

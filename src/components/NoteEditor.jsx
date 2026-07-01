@@ -445,8 +445,14 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
                     e.preventDefault()
                     const href = `ameno://note/${n.id}`
                     const selectedText = editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to).trim()
-                    const text = selectedText || n.title || 'Note'
-                    editor.chain().focus().insertContent(`<a href="${href}">${text}</a>`).run()
+                    const text = selectedText || n.title || 'Untitled'
+                    if (selectedText) {
+                      editor.chain().focus().setLink({ href }).run()
+                    } else {
+                      editor.chain().focus()
+                        .insertContent({ type: 'text', text, marks: [{ type: 'link', attrs: { href } }] })
+                        .run()
+                    }
                     setShowNoteLinkPicker(false)
                   }} style={{ background: 'none', border: 'none', borderRadius: '6px', padding: '6px 8px', textAlign: 'left', cursor: 'pointer', fontSize: '12px', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px' }}
                     onMouseEnter={e => e.currentTarget.style.background = theme.accentBg}
