@@ -70,7 +70,8 @@ const DrawingNode = Node.create({
       const canvas = document.createElement('canvas')
       canvas.width = node.attrs.width
       canvas.height = node.attrs.height
-      canvas.style.cssText = `width:100%;max-width:${node.attrs.width}px;height:${node.attrs.height}px;border-radius:8px;cursor:crosshair;touch-action:none;display:block;background:white;`
+      canvas.style.cssText = `width:100%;max-width:${node.attrs.width}px;height:${node.attrs.height}px;border-radius:8px;cursor:crosshair;touch-action:none;display:block;background:white;user-select:none;-webkit-user-select:none;`
+      canvas.draggable = false
 
       const ctx = canvas.getContext('2d')
 
@@ -97,8 +98,10 @@ const DrawingNode = Node.create({
         drawGrid()
       }
 
-      let drawing = false
-      let lastX = 0, lastY = 0
+      // Use canvas dataset to track drawing state — survives closure recreation
+      canvas.dataset.drawing = 'false'
+      canvas.dataset.lastX = '0'
+      canvas.dataset.lastY = '0'
       let color = '#1e1e2a'
       let lineWidth = 2
       let erasing = false
@@ -112,12 +115,15 @@ const DrawingNode = Node.create({
       }
 
       function startDraw(e) {
-        drawing = true;
-        [lastX, lastY] = getPos2(e)
+        e.preventDefault()
+        canvas.dataset.drawing = 'true'
+        const [x, y] = getPos2(e)
+        canvas.dataset.lastX = x
+        canvas.dataset.lastY = y
       }
 
       function draw(e) {
-        if (!drawing) return
+        if (canvas.dataset.drawing !== 'true') return
         e.preventDefault()
         const [x, y] = getPos2(e)
         ctx.globalCompositeOperation = erasing ? 'destination-out' : 'source-over'
@@ -126,15 +132,16 @@ const DrawingNode = Node.create({
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         ctx.beginPath()
-        ctx.moveTo(lastX, lastY)
+        ctx.moveTo(Number(canvas.dataset.lastX), Number(canvas.dataset.lastY))
         ctx.lineTo(x, y)
         ctx.stroke()
-        lastX = x; lastY = y
+        canvas.dataset.lastX = x
+        canvas.dataset.lastY = y
       }
 
-      function stopDraw() {
-        if (!drawing) return
-        drawing = false
+      function stopDraw(e) {
+        if (canvas.dataset.drawing !== 'true') return
+        canvas.dataset.drawing = 'false'
         ctx.globalCompositeOperation = 'source-over'
         if (typeof getPos === 'function') {
           editor.chain().command(({ tr }) => {
