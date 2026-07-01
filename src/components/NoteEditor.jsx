@@ -7,7 +7,7 @@ import Highlight from '@tiptap/extension-highlight'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Image from '@tiptap/extension-image'
 import { supabase } from '../lib/supabase'
-import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, StickyNote, Highlighter, BookOpen } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, StickyNote, Highlighter, BookOpen, Download } from 'lucide-react'
 import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 
@@ -88,6 +88,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
   const [tocHeadings, setTocHeadings] = useState([])
   const [showNoteLinkPicker, setShowNoteLinkPicker] = useState(false)
   const [noteLinkQuery, setNoteLinkQuery] = useState('')
+  const [showExportMenu, setShowExportMenu] = useState(false)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [bubble, setBubble] = useState(null) // {x, y, hasLink}
@@ -348,6 +349,97 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
     if (data) onSave(data)
   }
 
+  function exportPDF() {
+    const printStyle = document.createElement('style')
+    printStyle.id = 'ameno-print-style'
+    printStyle.textContent = `
+      @media print {
+        body > * { display: none !important; }
+        #ameno-print-area { display: block !important; }
+      }
+      #ameno-print-area {
+        display: none;
+        font-family: Georgia, serif;
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 40px;
+        color: #111;
+        background: white;
+      }
+      #ameno-print-area h1 { font-size: 28px; font-weight: 700; margin-bottom: 24px; border-bottom: 1px solid #ddd; padding-bottom: 12px; }
+      #ameno-print-area h2 { font-size: 20px; font-weight: 600; margin: 20px 0 8px; }
+      #ameno-print-area p { margin: 0 0 10px; line-height: 1.8; }
+      #ameno-print-area ul, #ameno-print-area ol { padding-left: 22px; margin: 0 0 10px; }
+      #ameno-print-area li { margin-bottom: 4px; line-height: 1.7; }
+      #ameno-print-area blockquote { border-left: 3px solid #888; padding-left: 14px; margin: 12px 0; color: #555; font-style: italic; }
+      #ameno-print-area pre { background: #f5f5f5; border-radius: 6px; padding: 12px 16px; font-size: 13px; overflow-x: auto; }
+      #ameno-print-area img { max-width: 100%; border-radius: 6px; margin: 12px 0; }
+      #ameno-print-area a { color: #4f46e5; }
+      #ameno-print-area mark { border-radius: 3px; padding: 0 2px; }
+    `
+    document.head.appendChild(printStyle)
+
+    const printArea = document.createElement('div')
+    printArea.id = 'ameno-print-area'
+    printArea.innerHTML = `<h1>${title}</h1>${editor.getHTML()}`
+    document.body.appendChild(printArea)
+
+    window.print()
+
+    document.head.removeChild(printStyle)
+    document.body.removeChild(printArea)
+    setShowExportMenu(false)
+  }
+
+  function exportMarkdown() {
+    const json = editor.getJSON()
+    const lines = []
+
+    function nodeToMd(node) {
+      if (!node) return ''
+      switch (node.type) {
+        case 'heading': return `${'#'.repeat(node.attrs?.level || 2)} ${node.content?.map(nodeToMd).join('') || ''}`
+        case 'paragraph': return node.content?.map(nodeToMd).join('') || ''
+        case 'text': {
+          let t = node.text || ''
+          const marks = node.marks || []
+          if (marks.find(m => m.type === 'bold')) t = `**${t}**`
+          if (marks.find(m => m.type === 'italic')) t = `*${t}*`
+          if (marks.find(m => m.type === 'strike')) t = `~~${t}~~`
+          if (marks.find(m => m.type === 'code')) t = `\`${t}\``
+          const link = marks.find(m => m.type === 'link')
+          if (link) t = `[${t}](${link.attrs?.href || ''})`
+          return t
+        }
+        case 'bulletList': return (node.content || []).map(li => `- ${li.content?.map(nodeToMd).join('') || ''}`).join('\n')
+        case 'orderedList': return (node.content || []).map((li, i) => `${i + 1}. ${li.content?.map(nodeToMd).join('') || ''}`).join('\n')
+        case 'listItem': return node.content?.map(nodeToMd).join('') || ''
+        case 'taskList': return (node.content || []).map(li => `- [${li.attrs?.checked ? 'x' : ' '}] ${li.content?.map(nodeToMd).join('') || ''}`).join('\n')
+        case 'taskItem': return node.content?.map(nodeToMd).join('') || ''
+        case 'blockquote': return (node.content || []).map(n => `> ${nodeToMd(n)}`).join('\n')
+        case 'codeBlock': return `\`\`\`\n${node.content?.map(nodeToMd).join('') || ''}\n\`\`\``
+        case 'image': return `![image](${node.attrs?.src || ''})`
+        case 'iframe': return `[embed](${node.attrs?.src || ''})`
+        case 'hardBreak': return '  \n'
+        default: return node.content?.map(nodeToMd).join('') || ''
+      }
+    }
+
+    ;(json.content || []).forEach(node => {
+      lines.push(nodeToMd(node))
+    })
+
+    const md = `# ${title}\n\n${lines.join('\n\n')}`
+    const blob = new Blob([md], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${title || 'note'}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+    setShowExportMenu(false)
+  }
+
   if (!editor) return null
 
   const filteredSlash = slashMenu ? getFilteredCommands(slashMenu.query) : []
@@ -473,6 +565,33 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
         <ToolBtn onClick={() => setShowToc(p => !p)} active={showToc} title="Table of contents" theme={theme}>
           <List size={14} />
         </ToolBtn>
+        {/* Export dropdown */}
+        <div style={{ position: 'relative' }}>
+          <ToolBtn onClick={() => setShowExportMenu(p => !p)} active={showExportMenu} title="Export" theme={theme}>
+            <Download size={14} />
+          </ToolBtn>
+          {showExportMenu && (
+            <div onMouseDown={e => e.stopPropagation()} style={{
+              position: 'absolute', top: '34px', right: 0, zIndex: 9999,
+              background: toolbarBg, border: `1px solid ${borderColor}`, borderRadius: '10px',
+              padding: '4px', minWidth: '160px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}>
+              <p style={{ fontSize: '10px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 4px', margin: 0 }}>Export as</p>
+              <button onClick={exportPDF} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '13px', color: theme.text, textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.background = theme.accentBg}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                🖨️ PDF (Print)
+              </button>
+              <button onClick={exportMarkdown} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '13px', color: theme.text, textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.background = theme.accentBg}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                📄 Markdown (.md)
+              </button>
+            </div>
+          )}
+        </div>
         <div style={{ width: '1px', height: '20px', background: dividerColor, margin: '0 4px' }} />
         <span style={{ fontSize: '11px', color: saveStatus === 'saved' ? (isDark ? '#4b5563' : '#9ca3af') : '#facc15' }}>
           {saveStatus === 'saved' ? 'Saved' : 'Saving...'}
