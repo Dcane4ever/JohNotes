@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import Link from '@tiptap/extension-link'
 import { supabase } from '../lib/supabase'
-import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off } from 'lucide-react'
 import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 
@@ -22,6 +23,8 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
 
   const [title, setTitle] = useState(note.title || '')
   const [saveStatus, setSaveStatus] = useState('saved')
+  const [showLinkInput, setShowLinkInput] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
   const saveTimer = useRef(null)
 
   const editor = useEditor({
@@ -30,6 +33,7 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
       Placeholder.configure({ placeholder: 'Start writing...' }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Link.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' } }),
     ],
     content: note.content || {},
     onUpdate: () => {
@@ -97,11 +101,47 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
         <ToolBtn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} title="Checklist" isDark={isDark}>
           <CheckSquare size={14} />
         </ToolBtn>
+        <div style={{ width: '1px', height: '20px', background: dividerColor, margin: '0 4px' }} />
+        <ToolBtn
+          onClick={() => {
+            if (editor.isActive('link')) {
+              editor.chain().focus().unsetLink().run()
+            } else {
+              setLinkUrl(editor.getAttributes('link').href || '')
+              setShowLinkInput(p => !p)
+            }
+          }}
+          active={editor.isActive('link')} title={editor.isActive('link') ? 'Remove link' : 'Add link'} isDark={isDark}>
+          {editor.isActive('link') ? <Link2Off size={14} /> : <Link2 size={14} />}
+        </ToolBtn>
         <div style={{ flex: 1 }} />
         <span style={{ fontSize: '11px', color: saveStatus === 'saved' ? (isDark ? '#4b5563' : '#9ca3af') : '#facc15' }}>
           {saveStatus === 'saved' ? 'Saved' : 'Saving...'}
         </span>
       </div>
+
+      {/* Link URL input */}
+      {showLinkInput && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', borderBottom: `1px solid ${borderColor}`, background: toolbarBg }}>
+          <Link2 size={13} style={{ color: theme.accent, flexShrink: 0 }} />
+          <input
+            autoFocus
+            value={linkUrl}
+            onChange={e => setLinkUrl(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                const url = linkUrl.trim()
+                if (url) editor.chain().focus().setLink({ href: url.startsWith('http') ? url : `https://${url}` }).run()
+                setShowLinkInput(false); setLinkUrl('')
+              }
+              if (e.key === 'Escape') { setShowLinkInput(false); setLinkUrl('') }
+            }}
+            placeholder="Paste URL and press Enter..."
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '12px', color: theme.text }}
+          />
+          <button onClick={() => { setShowLinkInput(false); setLinkUrl('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted, fontSize: '12px' }}>✕</button>
+        </div>
+      )}
 
       {/* Title */}
       <input
@@ -156,5 +196,7 @@ function getEditorCSS(text, heading, placeholder, marker) {
 .tiptap ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; }
 .tiptap ul[data-type="taskList"] li label { margin-top: 2px; }
 .tiptap ul[data-type="taskList"] li input[type="checkbox"] { accent-color: #c084fc; cursor: pointer; }
+.tiptap a { color: ${marker}; text-decoration: underline; cursor: pointer; }
+.tiptap a:hover { opacity: 0.8; }
 `
 }
