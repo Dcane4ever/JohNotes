@@ -27,6 +27,7 @@ export default function Notebook({ theme = {} }) {
   const [subjectsCollapsed, setSubjectsCollapsed] = useState(false)
   const [notesCollapsed, setNotesCollapsed] = useState(false)
   const [subjectMenu, setSubjectMenu] = useState(null) // id of subject with open menu
+  const [subjectHexInput, setSubjectHexInput] = useState('')
   const [noteMenu, setNoteMenu] = useState(null)       // id of note with open menu
   const [renamingSubject, setRenamingSubject] = useState(null)
   const [renamingNote, setRenamingNote] = useState(null)
@@ -66,6 +67,11 @@ export default function Notebook({ theme = {} }) {
     await supabase.from('subjects').delete().eq('id', id)
     setSubjects(prev => prev.filter(s => s.id !== id))
     if (activeSubject?.id === id) { setActiveSubject(null); setActiveNote(null) }
+  }
+
+  async function setSubjectColor(id, color) {
+    const { data } = await supabase.from('subjects').update({ color }).eq('id', id).select().single()
+    if (data) setSubjects(prev => prev.map(s => s.id === id ? data : s))
   }
 
   async function renameSubject(id) {
@@ -174,7 +180,29 @@ export default function Notebook({ theme = {} }) {
                       <button onClick={() => { setRenamingSubject(s.id); setRenameVal(s.name); setSubjectMenu(null) }} style={menuItem(textActive)}>
                         <Pencil size={12} /> Rename
                       </button>
-                      <button onClick={() => { deleteSubject(s.id); setSubjectMenu(null) }} style={{ ...menuItem(textActive), color: '#ef4444' }}>
+                      <div style={{ padding: '6px 10px', borderTop: `1px solid ${borderColor}` }}>
+                        <p style={{ fontSize: '10px', color: textMuted, marginBottom: '5px' }}>Color</p>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {COLORS.map(c => (
+                            <div key={c} onClick={() => setSubjectColor(s.id, c)} style={{
+                              width: '14px', height: '14px', borderRadius: '50%', background: c, cursor: 'pointer',
+                              outline: s.color === c ? '2px solid white' : 'none', outlineOffset: '1px',
+                            }} />
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px' }}>
+                          <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: s.color, flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }} />
+                          <input
+                            defaultValue=""
+                            placeholder={s.color}
+                            onChange={e => {
+                              if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setSubjectColor(s.id, e.target.value)
+                            }}
+                            style={{ ...inlineInput(inputBg, borderColor, textActive), fontSize: '11px', padding: '3px 6px', fontFamily: 'monospace' }}
+                          />
+                        </div>
+                      </div>
+                      <button onClick={() => { deleteSubject(s.id); setSubjectMenu(null) }} style={{ ...menuItem(textActive), color: '#ef4444', borderTop: `1px solid ${borderColor}` }}>
                         <Trash2 size={12} /> Delete
                       </button>
                     </div>
@@ -193,11 +221,23 @@ export default function Notebook({ theme = {} }) {
                 />
                 <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap' }}>
                   {COLORS.map(c => (
-                    <div key={c} onClick={() => setNewSubjectColor(c)} style={{
+                    <div key={c} onClick={() => { setNewSubjectColor(c); setSubjectHexInput('') }} style={{
                       width: '16px', height: '16px', borderRadius: '50%', background: c, cursor: 'pointer',
                       outline: newSubjectColor === c ? '2px solid white' : 'none', outlineOffset: '1px',
                     }} />
                   ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: newSubjectColor, flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }} />
+                  <input
+                    value={subjectHexInput}
+                    onChange={e => {
+                      setSubjectHexInput(e.target.value)
+                      if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setNewSubjectColor(e.target.value)
+                    }}
+                    placeholder={newSubjectColor}
+                    style={{ ...inlineInput(inputBg, borderColor, textActive), fontSize: '11px', padding: '3px 6px', fontFamily: 'monospace' }}
+                  />
                 </div>
                 <div style={{ display: 'flex', gap: '3px', marginTop: '6px', flexWrap: 'wrap' }}>
                   {ICONS.map(ic => (
