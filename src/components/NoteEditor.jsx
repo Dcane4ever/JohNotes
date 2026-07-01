@@ -6,6 +6,8 @@ import Link from '@tiptap/extension-link'
 import Highlight from '@tiptap/extension-highlight'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Image from '@tiptap/extension-image'
+import Mathematics from '@tiptap/extension-mathematics'
+import 'katex/dist/katex.min.css'
 import { supabase } from '../lib/supabase'
 import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, StickyNote, Highlighter, BookOpen, Download } from 'lucide-react'
 import { TaskList } from '@tiptap/extension-task-list'
@@ -44,6 +46,166 @@ const IframeNode = Node.create({
   },
 })
 
+// Custom drawing grid node — canvas stored as base64 dataURL
+const DrawingNode = Node.create({
+  name: 'drawing',
+  group: 'block',
+  atom: true,
+  addAttributes() {
+    return {
+      dataUrl: { default: null },
+      width: { default: 600 },
+      height: { default: 300 },
+    }
+  },
+  parseHTML() { return [{ tag: 'div[data-type="drawing"]' }] },
+  renderHTML({ HTMLAttributes }) {
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'drawing' })]
+  },
+  addNodeView() {
+    return ({ node, getPos, editor }) => {
+      const wrapper = document.createElement('div')
+      wrapper.style.cssText = 'margin:12px 0;position:relative;display:inline-block;width:100%;'
+
+      const canvas = document.createElement('canvas')
+      canvas.width = node.attrs.width
+      canvas.height = node.attrs.height
+      canvas.style.cssText = `width:100%;max-width:${node.attrs.width}px;height:${node.attrs.height}px;border-radius:8px;cursor:crosshair;touch-action:none;display:block;background:white;`
+
+      const ctx = canvas.getContext('2d')
+
+      // Draw grid
+      function drawGrid() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.strokeStyle = '#e5e7eb'
+        ctx.lineWidth = 0.5
+        const step = 20
+        for (let x = 0; x <= canvas.width; x += step) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke()
+        }
+        for (let y = 0; y <= canvas.height; y += step) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke()
+        }
+      }
+
+      // Load saved drawing on top of grid
+      if (node.attrs.dataUrl) {
+        const img = new Image()
+        img.onload = () => { drawGrid(); ctx.drawImage(img, 0, 0) }
+        img.src = node.attrs.dataUrl
+      } else {
+        drawGrid()
+      }
+
+      let drawing = false
+      let lastX = 0, lastY = 0
+      let color = '#1e1e2a'
+      let lineWidth = 2
+      let erasing = false
+
+      function getPos2(e) {
+        const rect = canvas.getBoundingClientRect()
+        const scaleX = canvas.width / rect.width
+        const scaleY = canvas.height / rect.height
+        const src = e.touches ? e.touches[0] : e
+        return [(src.clientX - rect.left) * scaleX, (src.clientY - rect.top) * scaleY]
+      }
+
+      function startDraw(e) {
+        drawing = true;
+        [lastX, lastY] = getPos2(e)
+      }
+
+      function draw(e) {
+        if (!drawing) return
+        e.preventDefault()
+        const [x, y] = getPos2(e)
+        ctx.globalCompositeOperation = erasing ? 'destination-out' : 'source-over'
+        ctx.strokeStyle = color
+        ctx.lineWidth = erasing ? 16 : lineWidth
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.beginPath()
+        ctx.moveTo(lastX, lastY)
+        ctx.lineTo(x, y)
+        ctx.stroke()
+        lastX = x; lastY = y
+      }
+
+      function stopDraw() {
+        if (!drawing) return
+        drawing = false
+        ctx.globalCompositeOperation = 'source-over'
+        if (typeof getPos === 'function') {
+          editor.chain().command(({ tr }) => {
+            tr.setNodeMarkup(getPos(), undefined, { ...node.attrs, dataUrl: canvas.toDataURL() })
+            return true
+          }).run()
+        }
+      }
+
+      canvas.addEventListener('mousedown', startDraw)
+      canvas.addEventListener('mousemove', draw)
+      canvas.addEventListener('mouseup', stopDraw)
+      canvas.addEventListener('mouseleave', stopDraw)
+      canvas.addEventListener('touchstart', startDraw, { passive: false })
+      canvas.addEventListener('touchmove', draw, { passive: false })
+      canvas.addEventListener('touchend', stopDraw)
+
+      // Toolbar
+      const toolbar = document.createElement('div')
+      toolbar.style.cssText = 'display:flex;gap:6px;align-items:center;padding:6px 0 4px;flex-wrap:wrap;'
+
+      const COLORS_DRAW = ['#1e1e2a','#ef4444','#3b82f6','#22c55e','#f59e0b','#a855f7','#ec4899']
+      COLORS_DRAW.forEach(c => {
+        const dot = document.createElement('button')
+        dot.style.cssText = `width:16px;height:16px;border-radius:50%;background:${c};border:2px solid transparent;cursor:pointer;padding:0;`
+        dot.onclick = () => { color = c; erasing = false; dot.style.outline = '2px solid #888'; dot.style.outlineOffset = '2px'; toolbar.querySelectorAll('button[data-colorbtn]').forEach(b => { if (b !== dot) { b.style.outline = 'none' } }) }
+        dot.dataset.colorbtn = '1'
+        toolbar.appendChild(dot)
+      })
+
+      const sep = document.createElement('div')
+      sep.style.cssText = 'width:1px;height:16px;background:#ccc;margin:0 2px;'
+      toolbar.appendChild(sep)
+
+      // Eraser
+      const eraserBtn = document.createElement('button')
+      eraserBtn.textContent = '⌫'
+      eraserBtn.title = 'Eraser'
+      eraserBtn.style.cssText = 'background:none;border:1px solid #ccc;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:12px;'
+      eraserBtn.onclick = () => { erasing = !erasing; eraserBtn.style.background = erasing ? '#fee2e2' : 'none' }
+      toolbar.appendChild(eraserBtn)
+
+      // Line width
+      const widthInput = document.createElement('input')
+      widthInput.type = 'range'; widthInput.min = '1'; widthInput.max = '10'; widthInput.value = '2'
+      widthInput.style.cssText = 'width:60px;cursor:pointer;'
+      widthInput.oninput = () => { lineWidth = Number(widthInput.value) }
+      toolbar.appendChild(widthInput)
+
+      // Clear
+      const clearBtn = document.createElement('button')
+      clearBtn.textContent = 'Clear'
+      clearBtn.style.cssText = 'background:none;border:1px solid #ccc;border-radius:4px;cursor:pointer;padding:2px 8px;font-size:12px;margin-left:auto;'
+      clearBtn.onclick = () => {
+        drawGrid()
+        if (typeof getPos === 'function') {
+          editor.chain().command(({ tr }) => {
+            tr.setNodeMarkup(getPos(), undefined, { ...node.attrs, dataUrl: null })
+            return true
+          }).run()
+        }
+      }
+      toolbar.appendChild(clearBtn)
+
+      wrapper.appendChild(toolbar)
+      wrapper.appendChild(canvas)
+      return { dom: wrapper }
+    }
+  },
+})
+
 const SAVE_DELAY = 1000
 
 const HIGHLIGHT_COLORS = [
@@ -69,6 +231,9 @@ const SLASH_COMMANDS = [
   { label: 'Image', description: 'Upload or paste image URL', icon: '🖼️', action: '__image__' },
   { label: 'Video', description: 'Embed YouTube or video URL', icon: '▶️', action: '__video__' },
   { label: 'Widget', description: 'Embed any iframe URL', icon: '</>', action: '__widget__' },
+  // Math & drawing
+  { label: 'Equation', description: 'Inline LaTeX math (KaTeX)', icon: '∑', action: '__math__' },
+  { label: 'Grid Pad', description: 'Drawable grid canvas', icon: '✏️', action: '__drawing__' },
 ]
 
 export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) {
@@ -141,6 +306,8 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
       TextStyle,
       Image.configure({ inline: false, allowBase64: false }),
       IframeNode,
+      DrawingNode,
+      Mathematics,
       SlashExtension,
     ],
     content: note.content || {},
@@ -243,6 +410,10 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
       setEmbedModal({ type: 'video' }); setEmbedUrl('')
     } else if (cmd.action === '__widget__') {
       setEmbedModal({ type: 'widget' }); setEmbedUrl('')
+    } else if (cmd.action === '__math__') {
+      setEmbedModal({ type: 'math' }); setEmbedUrl('')
+    } else if (cmd.action === '__drawing__') {
+      editor.chain().focus().insertContent({ type: 'drawing', attrs: { dataUrl: null, width: 600, height: 300 } }).run()
     } else {
       cmd.action(editor)
     }
@@ -265,6 +436,10 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
   function insertEmbed() {
     const url = embedUrl.trim()
     if (!url) return
+    if (embedModal.type === 'math') {
+      editor.chain().focus().insertContent(`$${url}$`).run()
+      setEmbedModal(null); setEmbedUrl(''); return
+    }
     if (embedModal.type === 'image') {
       editor.chain().focus().setImage({ src: url }).run()
     } else if (embedModal.type === 'video') {
@@ -772,10 +947,10 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
           onClick={() => setEmbedModal(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: theme.surface2, border: `1px solid ${borderColor}`, borderRadius: '12px', padding: '24px', width: '420px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
             <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: '700', color: theme.text }}>
-              {embedModal.type === 'image' ? '🖼️ Insert Image' : embedModal.type === 'video' ? '▶️ Embed Video' : '</> Embed Widget'}
+              {embedModal.type === 'image' ? '🖼️ Insert Image' : embedModal.type === 'video' ? '▶️ Embed Video' : embedModal.type === 'math' ? '∑ Insert Equation' : '</> Embed Widget'}
             </h3>
             <p style={{ margin: '0 0 16px', fontSize: '12px', color: theme.textMuted }}>
-              {embedModal.type === 'image' ? 'Upload a file or paste an image URL' : embedModal.type === 'video' ? 'Paste a YouTube or video URL' : 'Paste any embeddable iframe URL (e.g. potion.so widget)'}
+              {embedModal.type === 'image' ? 'Upload a file or paste an image URL' : embedModal.type === 'video' ? 'Paste a YouTube or video URL' : embedModal.type === 'math' ? 'Type LaTeX — e.g. x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}' : 'Paste any embeddable iframe URL (e.g. potion.so widget)'}
             </p>
 
             {embedModal.type === 'image' && (
