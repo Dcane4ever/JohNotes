@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { BookOpen, BookMarked, Calendar, FileText, Search, X, Palette } from 'lucide-react'
+import { BookOpen, BookMarked, Calendar, FileText, Search, X, Palette, Settings } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { THEMES } from '../lib/themes'
 import fanLogo from '../assets/test4.png'
@@ -10,6 +10,7 @@ const links = [
   { to: '/books', icon: BookMarked, label: 'Books' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/rrl', icon: FileText, label: 'RRL' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
 export default function Sidebar({ themeKey, theme, onThemeChange }) {

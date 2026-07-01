@@ -5,6 +5,7 @@ import Notebook from './pages/Notebook'
 import Books from './pages/Books'
 import Schedule from './pages/Schedule'
 import RRL from './pages/RRL'
+import Settings from './pages/Settings'
 import { THEMES, applyTheme } from './lib/themes'
 import { Menu, X } from 'lucide-react'
 
@@ -73,6 +74,7 @@ function AppInner({ themeKey, setThemeKey, theme }) {
           <Route path="/books" element={<Books theme={theme} />} />
           <Route path="/schedule" element={<Schedule theme={theme} />} />
           <Route path="/rrl" element={<RRL theme={theme} />} />
+          <Route path="/settings" element={<Settings theme={theme} />} />
         </Routes>
       </main>
     </div>
