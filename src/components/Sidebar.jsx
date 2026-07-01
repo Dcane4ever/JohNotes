@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { BookOpen, BookMarked, Calendar, FileText, Search, X, Palette } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { THEMES } from '../lib/themes'
-import fanLogo from '../assets/Fan.png'
+import fanLogo from '../assets/test4.png'
 
 const links = [
   { to: '/', icon: BookOpen, label: 'Notebook' },
@@ -62,17 +62,12 @@ export default function Sidebar({ themeKey, theme, onThemeChange }) {
     }}>
       {/* Logo + theme button */}
       <div style={{ padding: '0 8px 16px', borderBottom: `1px solid ${border}`, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <img
             src={fanLogo}
             alt="Amenō"
-            style={{ width: '42px', height: '42px', objectFit: 'contain', objectPosition: 'center top' }}
+            style={{ width: '160px', objectFit: 'contain' }}
           />
-          <span style={{
-            fontFamily: '"Cormorant Garamond", serif',
-            fontSize: '22px', fontWeight: '300', letterSpacing: '0.12em',
-            color: theme.text, fontStyle: 'italic',
-          }}>Amenō</span>
         </div>
         <button onClick={() => setShowThemePicker(p => !p)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: text, display: 'flex', padding: '4px' }} title="Change theme">
           <Palette size={14} />
