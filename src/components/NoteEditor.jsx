@@ -145,12 +145,11 @@ const DrawingNode = Node.create({
       }
 
       canvas.addEventListener('mousedown', startDraw)
-      canvas.addEventListener('mousemove', draw)
-      canvas.addEventListener('mouseup', stopDraw)
-      canvas.addEventListener('mouseleave', stopDraw)
+      document.addEventListener('mousemove', draw)
+      document.addEventListener('mouseup', stopDraw)
       canvas.addEventListener('touchstart', startDraw, { passive: false })
-      canvas.addEventListener('touchmove', draw, { passive: false })
-      canvas.addEventListener('touchend', stopDraw)
+      document.addEventListener('touchmove', draw, { passive: false })
+      document.addEventListener('touchend', stopDraw)
 
       // Toolbar
       const toolbar = document.createElement('div')
