@@ -73,11 +73,11 @@ export const THEMES = {
     surface3: '#dcdce8',
     border: '#d4d4e0',
     text: '#1a1a2e',
-    textMuted: '#6b7280',
-    textFaint: '#a0a0b8',
-    accent: '#7c3aed',
-    accentBg: 'rgba(124,58,237,0.08)',
-    accentBtn: '#7c3aed',
+    textMuted: '#374151',
+    textFaint: '#6b7280',
+    accent: '#6d28d9',
+    accentBg: 'rgba(109,40,217,0.08)',
+    accentBtn: '#6d28d9',
   },
 }
 

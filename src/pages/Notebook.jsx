@@ -20,6 +20,7 @@ export default function Notebook({ theme = {} }) {
   const [notes, setNotes] = useState([])
   const [activeSubject, setActiveSubject] = useState(null)
   const [activeNote, setActiveNote] = useState(null)
+  const [restored, setRestored] = useState(false)
   const [showNewSubject, setShowNewSubject] = useState(false)
   const [newSubjectName, setNewSubjectName] = useState('')
   const [newSubjectColor, setNewSubjectColor] = useState(COLORS[0])
@@ -34,9 +35,14 @@ export default function Notebook({ theme = {} }) {
 
   useEffect(() => { fetchSubjects() }, [])
   useEffect(() => {
-    if (activeSubject) fetchNotes(activeSubject.id)
-    else setNotes([])
+    if (activeSubject) {
+      fetchNotes(activeSubject.id)
+      localStorage.setItem('ameno-last-subject', activeSubject.id)
+    } else setNotes([])
   }, [activeSubject])
+  useEffect(() => {
+    if (activeNote) localStorage.setItem('ameno-last-note', activeNote.id)
+  }, [activeNote])
 
   // close menus on outside click
   useEffect(() => {
@@ -47,7 +53,26 @@ export default function Notebook({ theme = {} }) {
 
   async function fetchSubjects() {
     const { data } = await supabase.from('subjects').select('*').order('created_at')
-    if (data) setSubjects(data)
+    if (data) {
+      setSubjects(data)
+      if (!restored) {
+        setRestored(true)
+        const lastSubjectId = localStorage.getItem('ameno-last-subject')
+        const lastNoteId = localStorage.getItem('ameno-last-note')
+        const subject = data.find(s => s.id === lastSubjectId)
+        if (subject) {
+          setActiveSubject(subject)
+          if (lastNoteId) {
+            const { data: notes } = await supabase.from('notes').select('*').eq('subject_id', subject.id).order('updated_at', { ascending: false })
+            if (notes) {
+              setNotes(notes)
+              const note = notes.find(n => n.id === lastNoteId)
+              if (note) setActiveNote(note)
+            }
+          }
+        }
+      }
+    }
   }
 
   async function fetchNotes(subjectId) {

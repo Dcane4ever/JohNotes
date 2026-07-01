@@ -29,11 +29,14 @@ export default function Books() {
     if (data) setBooks(data)
   }
 
-  const genres = ['all', ...new Set(books.map(b => b.genre).filter(Boolean).map(g => g.trim()).filter(g => g !== ''))]
+  const genres = ['all', ...new Set(books.flatMap(b =>
+    (b.genre || '').split(',').map(g => g.trim()).filter(g => g !== '')
+  ))]
 
   const filtered = books.filter(b => {
     const matchStatus = filter === 'all' || b.status === filter
-    const matchGenre = genreFilter === 'all' || (b.genre || '').toLowerCase() === genreFilter.toLowerCase()
+    const bookGenres = (b.genre || '').split(',').map(g => g.trim().toLowerCase())
+    const matchGenre = genreFilter === 'all' || bookGenres.includes(genreFilter.toLowerCase())
     return matchStatus && matchGenre
   })
 

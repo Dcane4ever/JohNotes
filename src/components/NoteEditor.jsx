@@ -287,7 +287,7 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
           ref={editorWrapRef}
           onMouseMove={handleEditorMouseMove}
           onMouseLeave={handleEditorMouseLeave}
-          style={{ flex: 1, padding: '0 16px 32px 32px', position: 'relative', minWidth: 0 }}
+          style={{ flex: 1, padding: '0 16px 120px 32px', position: 'relative', minWidth: 0 }}
         >
           <style>{getEditorCSS(editorTextColor, editorHeadingColor, placeholderColor, markerColor)}</style>
           <EditorContent editor={editor} />

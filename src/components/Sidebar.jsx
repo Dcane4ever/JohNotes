@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { BookOpen, BookMarked, Calendar, FileText, Search, X, Palette, Settings } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -18,6 +18,7 @@ export default function Sidebar({ themeKey, theme, onThemeChange }) {
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [showThemePicker, setShowThemePicker] = useState(false)
+  const [preview, setPreview] = useState(null) // { type, data }
   const navigate = useNavigate()
 
   const bg = theme.surface2
@@ -136,7 +137,10 @@ export default function Sidebar({ themeKey, theme, onThemeChange }) {
             {searching && <p style={{ padding: '10px 12px', fontSize: '12px', color: text }}>Searching...</p>}
             {!searching && results.length === 0 && <p style={{ padding: '10px 12px', fontSize: '12px', color: text }}>No results</p>}
             {results.map(r => (
-              <div key={`${r.type}-${r.id}`} onClick={() => goTo(r.path)} style={{
+              <div key={`${r.type}-${r.id}`} onClick={() => {
+                if (r.type === 'note') { goTo(r.path) }
+                else { setPreview({ type: r.type, data: r }); setSearch(''); setResults([]) }
+              }} style={{
                 padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
                 borderBottom: `1px solid ${border}`,
               }}
@@ -153,6 +157,11 @@ export default function Sidebar({ themeKey, theme, onThemeChange }) {
           </div>
         )}
       </div>
+
+      {/* Search preview modal */}
+      {preview && (
+        <SearchPreview preview={preview} theme={theme} onClose={() => setPreview(null)} onNavigate={path => { setPreview(null); navigate(path) }} />
+      )}
 
       {/* Nav links */}
       {links.map(({ to, icon: Icon, label }) => (
@@ -174,5 +183,71 @@ export default function Sidebar({ themeKey, theme, onThemeChange }) {
         </NavLink>
       ))}
     </aside>
+  )
+}
+
+function SearchPreview({ preview, theme, onClose, onNavigate }) {
+  const [full, setFull] = useState(null)
+  const border = theme.border
+  const text = theme.text
+  const muted = theme.textMuted
+
+  useEffect(() => {
+    async function load() {
+      if (preview.type === 'book') {
+        const { data } = await supabase.from('books').select('*').eq('id', preview.data.id).single()
+        if (data) setFull(data)
+      } else if (preview.type === 'rrl') {
+        const { data } = await supabase.from('rrl_entries').select('*').eq('id', preview.data.id).single()
+        if (data) setFull(data)
+      }
+    }
+    load()
+  }, [preview])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: theme.surface1, border: `1px solid ${border}`, borderRadius: '12px',
+        width: '480px', maxHeight: '80vh', overflowY: 'auto', padding: '24px',
+        boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+          <div>
+            <p style={{ fontSize: '10px', color: theme.accent, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+              {preview.type === 'book' ? 'Book' : 'RRL Entry'}
+            </p>
+            <h2 style={{ fontSize: '17px', fontWeight: '700', color: text, margin: 0 }}>{preview.data.label}</h2>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: muted, cursor: 'pointer', padding: '4px' }}><X size={16} /></button>
+        </div>
+
+        {!full && <p style={{ color: muted, fontSize: '13px' }}>Loading...</p>}
+
+        {full && preview.type === 'book' && (
+          <div style={{ display: 'flex', gap: '16px' }}>
+            {full.cover_url && <img src={full.cover_url} style={{ width: '80px', height: '120px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />}
+            <div>
+              {full.author && <p style={{ fontSize: '13px', color: muted, marginBottom: '6px' }}>by {full.author}</p>}
+              {full.genre && <p style={{ fontSize: '12px', color: theme.textFaint, marginBottom: '8px' }}>Genre: {full.genre}</p>}
+              {full.review && <p style={{ fontSize: '13px', color: text, lineHeight: 1.6 }}>{full.review}</p>}
+            </div>
+          </div>
+        )}
+
+        {full && preview.type === 'rrl' && (
+          <div>
+            {full.authors?.length > 0 && <p style={{ fontSize: '12px', color: muted, marginBottom: '8px' }}>Authors: {full.authors.join(', ')}</p>}
+            {full.abstract && <p style={{ fontSize: '13px', color: text, lineHeight: 1.7 }}>{full.abstract}</p>}
+            {full.source_url && <a href={full.source_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: theme.accent, display: 'block', marginTop: '10px' }}>{full.source_url}</a>}
+          </div>
+        )}
+
+        <button onClick={() => onNavigate(preview.type === 'book' ? '/books' : '/rrl')}
+          style={{ marginTop: '16px', background: theme.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500' }}>
+          Open in {preview.type === 'book' ? 'Books' : 'RRL'}
+        </button>
+      </div>
+    </div>
   )
 }
