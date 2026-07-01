@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Plus, X, Search, Tag, ExternalLink, GitCompare, FileText, ChevronDown, ChevronUp, BookOpen } from 'lucide-react'
 
-export default function RRL() {
+export default function RRL({ theme = {} }) {
+  const t = theme
   const [entries, setEntries] = useState([])
   const [search, setSearch] = useState('')
   const [activeTag, setActiveTag] = useState('all')
@@ -10,7 +11,7 @@ export default function RRL() {
   const [editEntry, setEditEntry] = useState(null)
   const [compareMode, setCompareMode] = useState(false)
   const [compareSelected, setCompareSelected] = useState([])
-  const [addToNotebook, setAddToNotebook] = useState(null) // entry to send to notebook
+  const [addToNotebook, setAddToNotebook] = useState(null)
 
   useEffect(() => { fetchEntries() }, [])
 
@@ -47,15 +48,20 @@ export default function RRL() {
     })
   }
 
+  const primaryBtn = { display: 'flex', alignItems: 'center', gap: '6px', background: t.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500' }
+  const ghostBtn = { background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer' }
+  const inputStyle = { width: '100%', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '6px', padding: '8px 10px', color: t.text, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }
+  const tagPill = { fontSize: '11px', color: t.accent, background: t.accentBg, padding: '2px 8px', borderRadius: '20px', border: `1px solid ${t.border}` }
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e2e2e7' }}>RRL Compiler</h1>
+        <h1 style={{ fontSize: '22px', fontWeight: '700', color: t.text }}>RRL Compiler</h1>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => { setCompareMode(!compareMode); setCompareSelected([]) }}
-            style={{ ...compareMode ? primaryBtn : ghostBtn, display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ ...(compareMode ? primaryBtn : ghostBtn), display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <GitCompare size={14} /> {compareMode ? 'Exit Compare' : 'Compare'}
           </button>
@@ -68,7 +74,7 @@ export default function RRL() {
       {/* Search + tags */}
       <div style={{ padding: '16px 28px 0', display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-          <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#4b5563' }} />
+          <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: t.textFaint }} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -81,8 +87,8 @@ export default function RRL() {
             <button key={tag} onClick={() => setActiveTag(tag)} style={{
               padding: '4px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
               fontSize: '12px', fontWeight: '500',
-              background: activeTag === tag ? '#7c3aed' : '#1e1e2a',
-              color: activeTag === tag ? 'white' : '#9ca3af',
+              background: activeTag === tag ? t.accentBtn : t.surface3,
+              color: activeTag === tag ? 'white' : t.textMuted,
             }}>
               {tag === 'all' ? 'All' : `#${tag}`}
             </button>
@@ -92,10 +98,10 @@ export default function RRL() {
 
       {/* Compare mode banner */}
       {compareMode && (
-        <div style={{ margin: '12px 28px 0', padding: '10px 14px', background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.4)', borderRadius: '8px', fontSize: '13px', color: '#c084fc' }}>
+        <div style={{ margin: '12px 28px 0', padding: '10px 14px', background: t.accentBg, border: `1px solid ${t.accent}40`, borderRadius: '8px', fontSize: '13px', color: t.accent }}>
           Select 2–3 entries to compare. Selected: {compareSelected.length}/3
           {compareSelected.length >= 2 && (
-            <button onClick={() => setCompareMode('view')} style={{ marginLeft: '12px', background: '#7c3aed', border: 'none', borderRadius: '6px', padding: '4px 12px', color: 'white', cursor: 'pointer', fontSize: '12px' }}>
+            <button onClick={() => setCompareMode('view')} style={{ marginLeft: '12px', background: t.accentBtn, border: 'none', borderRadius: '6px', padding: '4px 12px', color: 'white', cursor: 'pointer', fontSize: '12px' }}>
               Compare now →
             </button>
           )}
@@ -107,20 +113,20 @@ export default function RRL() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${compareSelected.length}, 1fr)`, gap: '16px' }}>
             {compareSelected.map(entry => (
-              <div key={entry.id} style={{ background: '#12121a', border: '1px solid #2a2a35', borderRadius: '10px', padding: '16px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#e2e2e7', marginBottom: '6px' }}>{entry.title}</h3>
-                <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>{entry.authors?.join(', ')} {entry.year ? `(${entry.year})` : ''}</p>
-                <div style={{ borderTop: '1px solid #2a2a35', paddingTop: '10px' }}>
-                  <p style={{ fontSize: '11px', fontWeight: '600', color: '#4b5563', textTransform: 'uppercase', marginBottom: '6px' }}>Abstract</p>
-                  <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '1.6' }}>{entry.abstract || 'No abstract.'}</p>
+              <div key={entry.id} style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '16px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '6px' }}>{entry.title}</h3>
+                <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>{entry.authors?.join(', ')} {entry.year ? `(${entry.year})` : ''}</p>
+                <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '10px' }}>
+                  <p style={{ fontSize: '11px', fontWeight: '600', color: t.textFaint, textTransform: 'uppercase', marginBottom: '6px' }}>Abstract</p>
+                  <p style={{ fontSize: '13px', color: t.textMuted, lineHeight: '1.6' }}>{entry.abstract || 'No abstract.'}</p>
                 </div>
                 {entry.tags?.length > 0 && (
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '10px' }}>
-                    {entry.tags.map(t => <span key={t} style={tagPill}>#{t}</span>)}
+                    {entry.tags.map(tag => <span key={tag} style={tagPill}>#{tag}</span>)}
                   </div>
                 )}
                 {entry.source_url && (
-                  <a href={entry.source_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '10px', fontSize: '12px', color: '#818cf8', textDecoration: 'none' }}>
+                  <a href={entry.source_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '10px', fontSize: '12px', color: t.accent, textDecoration: 'none' }}>
                     <ExternalLink size={12} /> View source
                   </a>
                 )}
@@ -132,7 +138,7 @@ export default function RRL() {
         /* Entry list */
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 20px' }}>
           {filtered.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', flexDirection: 'column', gap: '12px', color: '#4b5563' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', flexDirection: 'column', gap: '12px', color: t.textFaint }}>
               <FileText size={40} />
               <p style={{ fontSize: '14px' }}>No entries yet. Add your first reference!</p>
             </div>
@@ -142,6 +148,8 @@ export default function RRL() {
                 <EntryCard
                   key={entry.id}
                   entry={entry}
+                  theme={t}
+                  tagPill={tagPill}
                   compareMode={compareMode === true}
                   selected={compareSelected.some(e => e.id === entry.id)}
                   onToggleCompare={() => toggleCompare(entry)}
@@ -157,6 +165,7 @@ export default function RRL() {
       {showModal && (
         <EntryModal
           entry={editEntry}
+          theme={t}
           onClose={() => setShowModal(false)}
           onSaved={onSaved}
           onDelete={deleteEntry}
@@ -166,6 +175,7 @@ export default function RRL() {
       {addToNotebook && (
         <AddToNotebookModal
           entry={addToNotebook}
+          theme={t}
           onClose={() => setAddToNotebook(null)}
         />
       )}
@@ -173,28 +183,28 @@ export default function RRL() {
   )
 }
 
-function EntryCard({ entry, compareMode, selected, onToggleCompare, onEdit, onAddToNotebook }) {
+function EntryCard({ entry, theme: t, tagPill, compareMode, selected, onToggleCompare, onEdit, onAddToNotebook }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
     <div style={{
-      background: '#12121a', border: `1px solid ${selected ? '#7c3aed' : '#2a2a35'}`,
+      background: t.surface1, border: `1px solid ${selected ? t.accent : t.border}`,
       borderRadius: '10px', padding: '16px', cursor: 'pointer',
-      outline: selected ? '1px solid #7c3aed' : 'none',
+      outline: selected ? `1px solid ${t.accent}` : 'none',
     }}
       onClick={compareMode ? onToggleCompare : onEdit}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#e2e2e7', margin: 0 }}>{entry.title}</h3>
-            {entry.year && <span style={{ fontSize: '11px', color: '#6b7280', background: '#1e1e2a', padding: '1px 6px', borderRadius: '4px' }}>{entry.year}</span>}
+            <h3 style={{ fontSize: '14px', fontWeight: '700', color: t.text, margin: 0 }}>{entry.title}</h3>
+            {entry.year && <span style={{ fontSize: '11px', color: t.textMuted, background: t.surface3, padding: '1px 6px', borderRadius: '4px' }}>{entry.year}</span>}
           </div>
           {entry.authors?.length > 0 && (
-            <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0' }}>{entry.authors.join(', ')}</p>
+            <p style={{ fontSize: '12px', color: t.textMuted, margin: '4px 0 0' }}>{entry.authors.join(', ')}</p>
           )}
           {entry.abstract && (
-            <p style={{ fontSize: '13px', color: '#9ca3af', margin: '8px 0 0', lineHeight: '1.5', display: expanded ? 'block' : '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: expanded ? 'visible' : 'hidden' }}>
+            <p style={{ fontSize: '13px', color: t.textMuted, margin: '8px 0 0', lineHeight: '1.5', display: expanded ? 'block' : '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: expanded ? 'visible' : 'hidden' }}>
               {entry.abstract}
             </p>
           )}
@@ -203,17 +213,17 @@ function EntryCard({ entry, compareMode, selected, onToggleCompare, onEdit, onAd
           <button
             onClick={e => { e.stopPropagation(); onAddToNotebook() }}
             title="Add to Notebook"
-            style={{ background: 'none', border: 'none', color: '#818cf8', cursor: 'pointer', display: 'flex', padding: '2px' }}
+            style={{ background: 'none', border: 'none', color: t.accent, cursor: 'pointer', display: 'flex', padding: '2px' }}
           >
             <BookOpen size={14} />
           </button>
           {entry.source_url && (
-            <a href={entry.source_url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#818cf8', display: 'flex' }}>
+            <a href={entry.source_url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: t.accent, display: 'flex' }}>
               <ExternalLink size={14} />
             </a>
           )}
           {entry.abstract && (
-            <button onClick={e => { e.stopPropagation(); setExpanded(!expanded) }} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', display: 'flex', padding: 0 }}>
+            <button onClick={e => { e.stopPropagation(); setExpanded(!expanded) }} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', display: 'flex', padding: 0 }}>
               {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
           )}
@@ -221,14 +231,14 @@ function EntryCard({ entry, compareMode, selected, onToggleCompare, onEdit, onAd
       </div>
       {entry.tags?.length > 0 && (
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '10px' }}>
-          {entry.tags.map(t => <span key={t} style={tagPill}>#{t}</span>)}
+          {entry.tags.map(tag => <span key={tag} style={tagPill}>#{tag}</span>)}
         </div>
       )}
     </div>
   )
 }
 
-function AddToNotebookModal({ entry, onClose }) {
+function AddToNotebookModal({ entry, theme: t, onClose }) {
   const [subjects, setSubjects] = useState([])
   const [selectedSubject, setSelectedSubject] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -237,14 +247,6 @@ function AddToNotebookModal({ entry, onClose }) {
   useEffect(() => {
     supabase.from('subjects').select('*').order('created_at').then(({ data }) => { if (data) setSubjects(data) })
   }, [])
-
-  function buildCitation(e) {
-    const authors = e.authors?.join(', ') || 'Unknown'
-    const year = e.year ? `(${e.year})` : ''
-    const title = e.title
-    const source = e.source_url ? `\nSource: ${e.source_url}` : ''
-    return `**Citation:** ${authors} ${year}. *${title}*.${source}\n\n**Abstract:**\n${e.abstract || ''}`
-  }
 
   async function addToNotebook() {
     if (!selectedSubject) return
@@ -272,42 +274,42 @@ function AddToNotebookModal({ entry, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: '#16161e', border: '1px solid #2a2a35', borderRadius: '12px', width: '400px', padding: '24px' }}>
+      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '400px', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#e2e2e7' }}>Add to Notebook</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={16} /></button>
+          <h2 style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>Add to Notebook</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={16} /></button>
         </div>
 
         {done ? (
           <p style={{ color: '#4ade80', fontSize: '14px', textAlign: 'center', padding: '12px 0' }}>✓ Added to notebook!</p>
         ) : (
           <>
-            <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '14px' }}>
+            <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '14px' }}>
               Pick a subject — a note will be created with the citation and abstract pre-filled.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', maxHeight: '220px', overflowY: 'auto' }}>
-              {subjects.length === 0 && <p style={{ fontSize: '12px', color: '#4b5563' }}>No subjects yet. Create one in Notebook first.</p>}
+              {subjects.length === 0 && <p style={{ fontSize: '12px', color: t.textFaint }}>No subjects yet. Create one in Notebook first.</p>}
               {subjects.map(s => (
                 <div key={s.id} onClick={() => setSelectedSubject(s.id)} style={{
                   display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
                   borderRadius: '8px', cursor: 'pointer',
-                  background: selectedSubject === s.id ? 'rgba(192,132,252,0.12)' : '#12121a',
-                  border: `1px solid ${selectedSubject === s.id ? '#c084fc' : '#2a2a35'}`,
+                  background: selectedSubject === s.id ? t.accentBg : t.surface1,
+                  border: `1px solid ${selectedSubject === s.id ? t.accent : t.border}`,
                 }}>
                   <span style={{ fontSize: '16px' }}>{s.icon}</span>
-                  <span style={{ fontSize: '13px', color: selectedSubject === s.id ? '#c084fc' : '#9ca3af' }}>{s.name}</span>
+                  <span style={{ fontSize: '13px', color: selectedSubject === s.id ? t.accent : t.textMuted }}>{s.name}</span>
                   <div style={{ marginLeft: 'auto', width: '8px', height: '8px', borderRadius: '50%', background: s.color }} />
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={addToNotebook} disabled={!selectedSubject || saving} style={{
-                flex: 1, background: selectedSubject ? '#7c3aed' : '#2a2a35', border: 'none', borderRadius: '8px',
+                flex: 1, background: selectedSubject ? t.accentBtn : t.border, border: 'none', borderRadius: '8px',
                 padding: '9px', color: 'white', fontSize: '13px', cursor: selectedSubject ? 'pointer' : 'not-allowed', fontWeight: '500',
               }}>
                 {saving ? 'Adding...' : 'Add to Notebook'}
               </button>
-              <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #2a2a35', borderRadius: '8px', padding: '9px 16px', color: '#9ca3af', fontSize: '13px', cursor: 'pointer' }}>
+              <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '9px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer' }}>
                 Cancel
               </button>
             </div>
@@ -318,7 +320,7 @@ function AddToNotebookModal({ entry, onClose }) {
   )
 }
 
-function EntryModal({ entry, onClose, onSaved, onDelete }) {
+function EntryModal({ entry, theme: t, onClose, onSaved, onDelete }) {
   const isEdit = !!entry
   const [form, setForm] = useState({
     title: entry?.title || '',
@@ -341,7 +343,7 @@ function EntryModal({ entry, onClose, onSaved, onDelete }) {
       abstract: form.abstract.trim(),
       year: form.year ? parseInt(form.year) : null,
       source_url: form.source_url.trim(),
-      tags: form.tags ? form.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [],
+      tags: form.tags ? form.tags.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean) : [],
     }
     if (isEdit) {
       const { data } = await supabase.from('rrl_entries').update(payload).eq('id', entry.id).select().single()
@@ -353,72 +355,56 @@ function EntryModal({ entry, onClose, onSaved, onDelete }) {
     setSaving(false)
   }
 
+  const mInput = { width: '100%', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '6px', padding: '8px 10px', color: t.text, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }
+  const mLabel = { fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: '#16161e', border: '1px solid #2a2a35', borderRadius: '12px', width: '540px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
+      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '540px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#e2e2e7' }}>{isEdit ? 'Edit Entry' : 'Add RRL Entry'}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={18} /></button>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>{isEdit ? 'Edit Entry' : 'Add RRL Entry'}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <Field label="Title *" value={form.title} onChange={v => set('title', v)} placeholder="Paper or article title" />
-          <Field label="Authors (comma separated)" value={form.authors} onChange={v => set('authors', v)} placeholder="Juan dela Cruz, Maria Santos" />
+          <MField label="Title *" value={form.title} onChange={v => set('title', v)} placeholder="Paper or article title" mInput={mInput} mLabel={mLabel} />
+          <MField label="Authors (comma separated)" value={form.authors} onChange={v => set('authors', v)} placeholder="Juan dela Cruz, Maria Santos" mInput={mInput} mLabel={mLabel} />
           <div>
-            <label style={labelStyle}>Abstract</label>
-            <textarea value={form.abstract} onChange={e => set('abstract', e.target.value)} placeholder="Paste the abstract here..." rows={5} style={{ ...inputStyle, resize: 'vertical', marginTop: '6px' }} />
+            <label style={mLabel}>Abstract</label>
+            <textarea value={form.abstract} onChange={e => set('abstract', e.target.value)} placeholder="Paste the abstract here..." rows={5} style={{ ...mInput, resize: 'vertical', marginTop: '6px' }} />
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <Field label="Year" value={form.year} onChange={v => set('year', v)} placeholder="2024" type="number" />
-            <Field label="Source URL" value={form.source_url} onChange={v => set('source_url', v)} placeholder="https://..." />
+            <MField label="Year" value={form.year} onChange={v => set('year', v)} placeholder="2024" type="number" mInput={mInput} mLabel={mLabel} />
+            <MField label="Source URL" value={form.source_url} onChange={v => set('source_url', v)} placeholder="https://..." mInput={mInput} mLabel={mLabel} />
           </div>
           <div>
-            <label style={labelStyle}>Tags (comma separated)</label>
+            <label style={mLabel}>Tags (comma separated)</label>
             <div style={{ position: 'relative', marginTop: '6px' }}>
-              <Tag size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#4b5563' }} />
-              <input value={form.tags} onChange={e => set('tags', e.target.value)} placeholder="methodology, qualitative, education" style={{ ...inputStyle, paddingLeft: '30px' }} />
+              <Tag size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: t.textFaint }} />
+              <input value={form.tags} onChange={e => set('tags', e.target.value)} placeholder="methodology, qualitative, education" style={{ ...mInput, paddingLeft: '30px' }} />
             </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
-          <button onClick={save} disabled={saving} style={{ ...primaryBtn, flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}>
+          <button onClick={save} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: t.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500', flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}>
             {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Entry'}
           </button>
           {isEdit && (
-            <button onClick={() => onDelete(entry.id)} style={{ ...ghostBtn, color: '#ef4444', borderColor: '#ef4444' }}>Delete</button>
+            <button onClick={() => onDelete(entry.id)} style={{ background: 'transparent', border: '1px solid #ef4444', borderRadius: '8px', padding: '8px 16px', color: '#ef4444', fontSize: '13px', cursor: 'pointer' }}>Delete</button>
           )}
-          <button onClick={onClose} style={ghostBtn}>Cancel</button>
+          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
         </div>
       </div>
     </div>
   )
 }
 
-function Field({ label, value, onChange, placeholder, type = 'text' }) {
+function MField({ label, value, onChange, placeholder, type = 'text', mInput, mLabel }) {
   return (
     <div style={{ flex: 1 }}>
-      <label style={labelStyle}>{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle, marginTop: '6px' }} />
+      <label style={mLabel}>{label}</label>
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...mInput, marginTop: '6px' }} />
     </div>
   )
-}
-
-const labelStyle = { fontSize: '11px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }
-const inputStyle = {
-  width: '100%', background: '#12121a', border: '1px solid #2a2a35', borderRadius: '6px',
-  padding: '8px 10px', color: '#e2e2e7', fontSize: '13px', outline: 'none', boxSizing: 'border-box',
-}
-const primaryBtn = {
-  display: 'flex', alignItems: 'center', gap: '6px',
-  background: '#7c3aed', border: 'none', borderRadius: '8px',
-  padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500',
-}
-const ghostBtn = {
-  background: 'transparent', border: '1px solid #2a2a35', borderRadius: '8px',
-  padding: '8px 16px', color: '#9ca3af', fontSize: '13px', cursor: 'pointer',
-}
-const tagPill = {
-  fontSize: '11px', color: '#818cf8', background: 'rgba(129,140,248,0.1)',
-  padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(129,140,248,0.2)',
 }
