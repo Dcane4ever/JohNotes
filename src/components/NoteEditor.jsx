@@ -181,9 +181,20 @@ export default function NoteEditor({ note, onSave, theme = {} }) {
                 editor.chain().focus().unsetLink().run()
                 setBubble(null)
               } else {
-                setLinkUrl('')
-                setShowLinkInput(true)
-                setBubble(null)
+                const selectedText = editor.state.doc.textBetween(
+                  editor.state.selection.from,
+                  editor.state.selection.to
+                ).trim()
+                const looksLikeUrl = /^https?:\/\/|^www\./i.test(selectedText)
+                if (looksLikeUrl) {
+                  const href = selectedText.startsWith('http') ? selectedText : `https://${selectedText}`
+                  editor.chain().focus().setLink({ href }).run()
+                  setBubble(null)
+                } else {
+                  setLinkUrl('')
+                  setShowLinkInput(true)
+                  setBubble(null)
+                }
               }
             }}
             active={bubble.hasLink} title={bubble.hasLink ? 'Remove link' : 'Make hyperlink'} isDark={isDark}>
