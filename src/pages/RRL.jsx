@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, X, Search, Tag, ExternalLink, GitCompare, FileText, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, X, Search, Tag, ExternalLink, GitCompare, FileText, ChevronDown, ChevronUp, BookOpen } from 'lucide-react'
 
 export default function RRL() {
   const [entries, setEntries] = useState([])
@@ -10,6 +10,7 @@ export default function RRL() {
   const [editEntry, setEditEntry] = useState(null)
   const [compareMode, setCompareMode] = useState(false)
   const [compareSelected, setCompareSelected] = useState([])
+  const [addToNotebook, setAddToNotebook] = useState(null) // entry to send to notebook
 
   useEffect(() => { fetchEntries() }, [])
 
@@ -145,6 +146,7 @@ export default function RRL() {
                   selected={compareSelected.some(e => e.id === entry.id)}
                   onToggleCompare={() => toggleCompare(entry)}
                   onEdit={() => { setEditEntry(entry); setShowModal(true) }}
+                  onAddToNotebook={() => setAddToNotebook(entry)}
                 />
               ))}
             </div>
@@ -160,11 +162,18 @@ export default function RRL() {
           onDelete={deleteEntry}
         />
       )}
+
+      {addToNotebook && (
+        <AddToNotebookModal
+          entry={addToNotebook}
+          onClose={() => setAddToNotebook(null)}
+        />
+      )}
     </div>
   )
 }
 
-function EntryCard({ entry, compareMode, selected, onToggleCompare, onEdit }) {
+function EntryCard({ entry, compareMode, selected, onToggleCompare, onEdit, onAddToNotebook }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -190,7 +199,14 @@ function EntryCard({ entry, compareMode, selected, onToggleCompare, onEdit }) {
             </p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
+          <button
+            onClick={e => { e.stopPropagation(); onAddToNotebook() }}
+            title="Add to Notebook"
+            style={{ background: 'none', border: 'none', color: '#818cf8', cursor: 'pointer', display: 'flex', padding: '2px' }}
+          >
+            <BookOpen size={14} />
+          </button>
           {entry.source_url && (
             <a href={entry.source_url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#818cf8', display: 'flex' }}>
               <ExternalLink size={14} />
@@ -208,6 +224,96 @@ function EntryCard({ entry, compareMode, selected, onToggleCompare, onEdit }) {
           {entry.tags.map(t => <span key={t} style={tagPill}>#{t}</span>)}
         </div>
       )}
+    </div>
+  )
+}
+
+function AddToNotebookModal({ entry, onClose }) {
+  const [subjects, setSubjects] = useState([])
+  const [selectedSubject, setSelectedSubject] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    supabase.from('subjects').select('*').order('created_at').then(({ data }) => { if (data) setSubjects(data) })
+  }, [])
+
+  function buildCitation(e) {
+    const authors = e.authors?.join(', ') || 'Unknown'
+    const year = e.year ? `(${e.year})` : ''
+    const title = e.title
+    const source = e.source_url ? `\nSource: ${e.source_url}` : ''
+    return `**Citation:** ${authors} ${year}. *${title}*.${source}\n\n**Abstract:**\n${e.abstract || ''}`
+  }
+
+  async function addToNotebook() {
+    if (!selectedSubject) return
+    setSaving(true)
+    const content = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Citation: ' }, { type: 'text', text: `${entry.authors?.join(', ') || 'Unknown'} ${entry.year ? `(${entry.year})` : ''}. ${entry.title}.` }] },
+        ...(entry.source_url ? [{ type: 'paragraph', content: [{ type: 'text', text: `Source: ${entry.source_url}` }] }] : []),
+        { type: 'paragraph' },
+        { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Abstract' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: entry.abstract || '' }] },
+      ]
+    }
+    await supabase.from('notes').insert({
+      subject_id: selectedSubject,
+      title: entry.title,
+      content,
+      color: '#818cf8',
+    })
+    setSaving(false)
+    setDone(true)
+    setTimeout(onClose, 1200)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+      <div style={{ background: '#16161e', border: '1px solid #2a2a35', borderRadius: '12px', width: '400px', padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#e2e2e7' }}>Add to Notebook</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={16} /></button>
+        </div>
+
+        {done ? (
+          <p style={{ color: '#4ade80', fontSize: '14px', textAlign: 'center', padding: '12px 0' }}>✓ Added to notebook!</p>
+        ) : (
+          <>
+            <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '14px' }}>
+              Pick a subject — a note will be created with the citation and abstract pre-filled.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', maxHeight: '220px', overflowY: 'auto' }}>
+              {subjects.length === 0 && <p style={{ fontSize: '12px', color: '#4b5563' }}>No subjects yet. Create one in Notebook first.</p>}
+              {subjects.map(s => (
+                <div key={s.id} onClick={() => setSelectedSubject(s.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                  borderRadius: '8px', cursor: 'pointer',
+                  background: selectedSubject === s.id ? 'rgba(192,132,252,0.12)' : '#12121a',
+                  border: `1px solid ${selectedSubject === s.id ? '#c084fc' : '#2a2a35'}`,
+                }}>
+                  <span style={{ fontSize: '16px' }}>{s.icon}</span>
+                  <span style={{ fontSize: '13px', color: selectedSubject === s.id ? '#c084fc' : '#9ca3af' }}>{s.name}</span>
+                  <div style={{ marginLeft: 'auto', width: '8px', height: '8px', borderRadius: '50%', background: s.color }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={addToNotebook} disabled={!selectedSubject || saving} style={{
+                flex: 1, background: selectedSubject ? '#7c3aed' : '#2a2a35', border: 'none', borderRadius: '8px',
+                padding: '9px', color: 'white', fontSize: '13px', cursor: selectedSubject ? 'pointer' : 'not-allowed', fontWeight: '500',
+              }}>
+                {saving ? 'Adding...' : 'Add to Notebook'}
+              </button>
+              <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #2a2a35', borderRadius: '8px', padding: '9px 16px', color: '#9ca3af', fontSize: '13px', cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
