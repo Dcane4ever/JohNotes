@@ -14,7 +14,8 @@ const RECURRENCE_OPTIONS = [
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const EVENT_COLORS = ['#c084fc','#f472b6','#fb923c','#facc15','#4ade80','#38bdf8','#818cf8','#f87171']
 
-export default function Schedule() {
+export default function Schedule({ theme = {} }) {
+  const t = theme
   const [events, setEvents] = useState([])
   const [today] = useState(new Date())
   const [current, setCurrent] = useState(new Date())
@@ -102,26 +103,29 @@ export default function Schedule() {
 
   const isToday = (day) => day && today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
 
+  const schedPrimaryBtn = { display: 'flex', alignItems: 'center', gap: '6px', background: t.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500' }
+  const schedIconBtn = { background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e2e2e7' }}>Schedule</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: t.text }}>Schedule</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button onClick={() => setCurrent(new Date(year, month - 1))} style={iconBtn}><ChevronLeft size={16} /></button>
-            <span style={{ fontSize: '15px', fontWeight: '600', color: '#c084fc', minWidth: '160px', textAlign: 'center' }}>
+            <button onClick={() => setCurrent(new Date(year, month - 1))} style={schedIconBtn}><ChevronLeft size={16} /></button>
+            <span style={{ fontSize: '15px', fontWeight: '600', color: t.accent, minWidth: '160px', textAlign: 'center' }}>
               {MONTHS[month]} {year}
             </span>
-            <button onClick={() => setCurrent(new Date(year, month + 1))} style={iconBtn}><ChevronRight size={16} /></button>
+            <button onClick={() => setCurrent(new Date(year, month + 1))} style={schedIconBtn}><ChevronRight size={16} /></button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button onClick={requestNotifPermission} style={{ ...iconBtn, gap: '6px', padding: '6px 12px', fontSize: '12px', color: notifPermission === 'granted' ? '#4ade80' : '#9ca3af' }}>
+          <button onClick={requestNotifPermission} style={{ ...schedIconBtn, gap: '6px', padding: '6px 12px', fontSize: '12px', color: notifPermission === 'granted' ? '#4ade80' : t.textMuted }}>
             {notifPermission === 'granted' ? <Bell size={14} /> : <BellOff size={14} />}
             {notifPermission === 'granted' ? 'Notifications on' : 'Enable notifications'}
           </button>
-          <button onClick={() => openAdd(null)} style={primaryBtn}>
+          <button onClick={() => openAdd(null)} style={schedPrimaryBtn}>
             <Plus size={15} /> Add Event
           </button>
         </div>
@@ -130,7 +134,7 @@ export default function Schedule() {
       {/* Day headers */}
       <div style={{ padding: '16px 28px 0', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', flexShrink: 0 }}>
         {DAYS.map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#4b5563', padding: '4px 0' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize: '11px', fontWeight: '600', color: t.textFaint, padding: '4px 0' }}>{d}</div>
         ))}
       </div>
 
@@ -143,20 +147,20 @@ export default function Schedule() {
               key={i}
               onClick={() => day && openDay(day)}
               style={{
-                background: isToday(day) ? 'rgba(192,132,252,0.08)' : day ? '#12121a' : 'transparent',
-                border: isToday(day) ? '1px solid #c084fc' : '1px solid #1e1e2a',
+                background: isToday(day) ? t.accentBg : day ? t.surface1 : 'transparent',
+                border: isToday(day) ? `1px solid ${t.accent}` : `1px solid ${t.border}`,
                 borderRadius: '8px', padding: '6px', cursor: day ? 'pointer' : 'default',
                 overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '2px',
               }}
             >
               {day && (
                 <>
-                  <span style={{ fontSize: '12px', fontWeight: isToday(day) ? '700' : '400', color: isToday(day) ? '#c084fc' : '#6b7280', alignSelf: 'flex-end' }}>{day}</span>
+                  <span style={{ fontSize: '12px', fontWeight: isToday(day) ? '700' : '400', color: isToday(day) ? t.accent : t.textMuted, alignSelf: 'flex-end' }}>{day}</span>
                   {dayEvents.slice(0, 3).map(ev => (
                     <div
                       key={ev.id}
                       style={{
-                        background: ev.color || '#7c3aed', borderRadius: '3px',
+                        background: ev.color || t.accentBtn, borderRadius: '3px',
                         padding: '1px 4px', fontSize: '10px', color: 'white',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}
@@ -165,7 +169,7 @@ export default function Schedule() {
                     </div>
                   ))}
                   {dayEvents.length > 3 && (
-                    <span style={{ fontSize: '9px', color: '#c084fc', fontWeight: '600' }}>
+                    <span style={{ fontSize: '9px', color: t.accent, fontWeight: '600' }}>
                       +{dayEvents.length - 3} more
                     </span>
                   )}
@@ -180,23 +184,23 @@ export default function Schedule() {
       {dayDetail && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
           onClick={() => setDayDetail(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#16161e', border: '1px solid #2a2a35', borderRadius: '12px', width: '360px', maxHeight: '80vh', overflowY: 'auto', padding: '20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '360px', maxHeight: '80vh', overflowY: 'auto', padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#e2e2e7' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>
                 {MONTHS[month]} {dayDetail.day}, {year}
               </h3>
-              <button onClick={() => setDayDetail(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={16} /></button>
+              <button onClick={() => setDayDetail(null)} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {dayDetail.events.length === 0 && (
-                <p style={{ fontSize: '13px', color: '#4b5563', textAlign: 'center', padding: '20px 0' }}>No events this day</p>
+                <p style={{ fontSize: '13px', color: t.textFaint, textAlign: 'center', padding: '20px 0' }}>No events this day</p>
               )}
               {dayDetail.events.map(ev => (
                 <div
                   key={ev.id}
                   onClick={() => openEdit(ev, { stopPropagation: () => {} })}
                   style={{
-                    background: ev.color || '#7c3aed', borderRadius: '8px',
+                    background: ev.color || t.accentBtn, borderRadius: '8px',
                     padding: '10px 14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '3px',
                   }}
                 >
@@ -212,7 +216,7 @@ export default function Schedule() {
             </div>
             <button
               onClick={() => openAdd(new Date(year, month, dayDetail.day))}
-              style={{ ...primaryBtn, width: '100%', justifyContent: 'center', marginTop: '14px' }}
+              style={{ ...schedPrimaryBtn, width: '100%', justifyContent: 'center', marginTop: '14px' }}
             >
               <Plus size={14} /> Add Event
             </button>
@@ -224,6 +228,7 @@ export default function Schedule() {
         <EventModal
           event={editEvent}
           defaultDate={selectedDate}
+          theme={t}
           onClose={() => setShowModal(false)}
           onSaved={onSaved}
           onDelete={deleteEvent}
@@ -234,7 +239,7 @@ export default function Schedule() {
   )
 }
 
-function EventModal({ event, defaultDate, onClose, onSaved, onDelete, notifPermission }) {
+function EventModal({ event, defaultDate, theme: t = {}, onClose, onSaved, onDelete, notifPermission }) {
   const isEdit = !!event
   const defaultDateStr = defaultDate ? `${defaultDate.getFullYear()}-${String(defaultDate.getMonth()+1).padStart(2,'0')}-${String(defaultDate.getDate()).padStart(2,'0')}` : ''
   const defaultTimeStr = event?.start_time ? new Date(event.start_time).toTimeString().slice(0,5) : '09:00'
@@ -297,40 +302,45 @@ function EventModal({ event, defaultDate, onClose, onSaved, onDelete, notifPermi
     }
   }
 
+  const mInput = { width: '100%', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '6px', padding: '8px 10px', color: t.text, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }
+  const mLabel = { fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }
+  const mPrimary = { display: 'flex', alignItems: 'center', gap: '6px', background: t.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500' }
+  const mGhost = { background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer' }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: '#16161e', border: '1px solid #2a2a35', borderRadius: '12px', width: '460px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
+      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '460px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#e2e2e7' }}>{isEdit ? 'Edit Event' : 'New Event'}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={18} /></button>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>{isEdit ? 'Edit Event' : 'New Event'}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Title */}
           <div>
-            <label style={labelStyle}>Title *</label>
-            <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Event title" style={{ ...inputStyle, marginTop: '6px' }} />
+            <label style={mLabel}>Title *</label>
+            <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Event title" style={{ ...mInput, marginTop: '6px' }} />
           </div>
 
           {/* Date + Time */}
           <div style={{ display: 'flex', gap: '12px' }}>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Date</label>
-              <input type="date" value={form.date} onChange={e => set('date', e.target.value)} style={{ ...inputStyle, marginTop: '6px', colorScheme: 'dark' }} />
+              <label style={mLabel}>Date</label>
+              <input type="date" value={form.date} onChange={e => set('date', e.target.value)} style={{ ...mInput, marginTop: '6px', colorScheme: t.dark ? 'dark' : 'light' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Time</label>
+              <label style={mLabel}>Time</label>
               <div style={{ position: 'relative', marginTop: '6px' }}>
-                <Clock size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
-                <input type="time" value={form.time} onChange={e => set('time', e.target.value)} style={{ ...inputStyle, paddingLeft: '28px', colorScheme: 'dark' }} />
+                <Clock size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: t.textMuted }} />
+                <input type="time" value={form.time} onChange={e => set('time', e.target.value)} style={{ ...mInput, paddingLeft: '28px', colorScheme: t.dark ? 'dark' : 'light' }} />
               </div>
             </div>
           </div>
 
           {/* Recurrence */}
           <div>
-            <label style={labelStyle}>Repeat</label>
-            <select value={form.recurrence_rule} onChange={e => set('recurrence_rule', e.target.value)} style={{ ...inputStyle, marginTop: '6px' }}>
+            <label style={mLabel}>Repeat</label>
+            <select value={form.recurrence_rule} onChange={e => set('recurrence_rule', e.target.value)} style={{ ...mInput, marginTop: '6px' }}>
               {RECURRENCE_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
             </select>
           </div>
@@ -338,13 +348,13 @@ function EventModal({ event, defaultDate, onClose, onSaved, onDelete, notifPermi
           {/* Custom days */}
           {form.recurrence_rule === 'custom' && (
             <div>
-              <label style={labelStyle}>Days</label>
+              <label style={mLabel}>Days</label>
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                 {DAY_NAMES.map((d, i) => (
                   <button key={i} onClick={() => toggleCustomDay(i)} style={{
                     flex: 1, padding: '6px 0', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '600',
-                    background: form.custom_days.includes(i) ? '#7c3aed' : '#1e1e2a',
-                    color: form.custom_days.includes(i) ? 'white' : '#9ca3af',
+                    background: form.custom_days.includes(i) ? t.accentBtn : t.surface3,
+                    color: form.custom_days.includes(i) ? 'white' : t.textMuted,
                   }}>{d}</button>
                 ))}
               </div>
@@ -353,26 +363,26 @@ function EventModal({ event, defaultDate, onClose, onSaved, onDelete, notifPermi
 
           {/* Color */}
           <div>
-            <label style={labelStyle}>Color</label>
+            <label style={mLabel}>Color</label>
             <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
               {EVENT_COLORS.map(c => (
                 <div key={c} onClick={() => set('color', c)} style={{
                   width: '22px', height: '22px', borderRadius: '50%', background: c, cursor: 'pointer',
-                  outline: form.color === c ? '2px solid white' : 'none', outlineOffset: '2px',
+                  outline: form.color === c ? `2px solid ${t.text}` : 'none', outlineOffset: '2px',
                 }} />
               ))}
             </div>
           </div>
 
           {/* Push notification */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: '#12121a', borderRadius: '8px', border: '1px solid #2a2a35' }}>
-            <Bell size={15} style={{ color: form.push_enabled ? '#c084fc' : '#4b5563' }} />
-            <span style={{ flex: 1, fontSize: '13px', color: '#9ca3af' }}>Notify me at this time</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: t.surface1, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+            <Bell size={15} style={{ color: form.push_enabled ? t.accent : t.textFaint }} />
+            <span style={{ flex: 1, fontSize: '13px', color: t.textMuted }}>Notify me at this time</span>
             <div
               onClick={() => set('push_enabled', !form.push_enabled)}
               style={{
                 width: '36px', height: '20px', borderRadius: '10px', cursor: 'pointer',
-                background: form.push_enabled ? '#7c3aed' : '#2a2a35', position: 'relative', transition: 'all 0.2s',
+                background: form.push_enabled ? t.accentBtn : t.border, position: 'relative', transition: 'all 0.2s',
               }}
             >
               <div style={{
@@ -387,40 +397,21 @@ function EventModal({ event, defaultDate, onClose, onSaved, onDelete, notifPermi
 
           {/* Notes */}
           <div>
-            <label style={labelStyle}>Notes</label>
-            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Optional notes..." rows={2} style={{ ...inputStyle, resize: 'vertical', marginTop: '6px' }} />
+            <label style={mLabel}>Notes</label>
+            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Optional notes..." rows={2} style={{ ...mInput, resize: 'vertical', marginTop: '6px' }} />
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
-          <button onClick={save} disabled={saving} style={{ ...primaryBtn, flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}>
+          <button onClick={save} disabled={saving} style={{ ...mPrimary, flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}>
             {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Event'}
           </button>
           {isEdit && (
-            <button onClick={() => onDelete(event.id)} style={{ ...ghostBtn, color: '#ef4444', borderColor: '#ef4444' }}>Delete</button>
+            <button onClick={() => onDelete(event.id)} style={{ ...mGhost, color: '#ef4444', borderColor: '#ef4444' }}>Delete</button>
           )}
-          <button onClick={onClose} style={ghostBtn}>Cancel</button>
+          <button onClick={onClose} style={mGhost}>Cancel</button>
         </div>
       </div>
     </div>
   )
-}
-
-const labelStyle = { fontSize: '11px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }
-const inputStyle = {
-  width: '100%', background: '#12121a', border: '1px solid #2a2a35', borderRadius: '6px',
-  padding: '8px 10px', color: '#e2e2e7', fontSize: '13px', outline: 'none', boxSizing: 'border-box',
-}
-const primaryBtn = {
-  display: 'flex', alignItems: 'center', gap: '6px',
-  background: '#7c3aed', border: 'none', borderRadius: '8px',
-  padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500',
-}
-const ghostBtn = {
-  background: 'transparent', border: '1px solid #2a2a35', borderRadius: '8px',
-  padding: '8px 16px', color: '#9ca3af', fontSize: '13px', cursor: 'pointer',
-}
-const iconBtn = {
-  background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer',
-  padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px',
 }

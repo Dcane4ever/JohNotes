@@ -15,7 +15,8 @@ const STATUS_COLORS = {
   finished: '#4ade80',
 }
 
-export default function Books() {
+export default function Books({ theme = {} }) {
+  const t = theme
   const [books, setBooks] = useState([])
   const [filter, setFilter] = useState('all')
   const [genreFilter, setGenreFilter] = useState('all')
@@ -59,8 +60,8 @@ export default function Books() {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e2e2e7' }}>Book Tracker</h1>
-        <button onClick={openAdd} style={primaryBtn}>
+        <h1 style={{ fontSize: '22px', fontWeight: '700', color: t.text }}>Book Tracker</h1>
+        <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: t.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500' }}>
           <Plus size={15} /> Add Book
         </button>
       </div>
@@ -74,8 +75,8 @@ export default function Books() {
             style={{
               padding: '6px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer',
               fontSize: '13px', fontWeight: '500',
-              background: filter === s.key ? '#7c3aed' : '#1e1e2a',
-              color: filter === s.key ? 'white' : '#9ca3af',
+              background: filter === s.key ? t.accentBtn : t.surface3,
+              color: filter === s.key ? 'white' : t.textMuted,
               transition: 'all 0.15s',
             }}
           >
@@ -94,9 +95,9 @@ export default function Books() {
               style={{
                 padding: '4px 12px', borderRadius: '20px', border: '1px solid',
                 cursor: 'pointer', fontSize: '12px', fontWeight: '500', transition: 'all 0.15s',
-                background: genreFilter === g ? 'rgba(192,132,252,0.15)' : 'transparent',
-                borderColor: genreFilter === g ? '#c084fc' : '#2a2a35',
-                color: genreFilter === g ? '#c084fc' : '#6b7280',
+                background: genreFilter === g ? t.accentBg : 'transparent',
+                borderColor: genreFilter === g ? t.accent : t.border,
+                color: genreFilter === g ? t.accent : t.textMuted,
               }}
             >
               {g === 'all' ? 'All genres' : g}
@@ -108,14 +109,14 @@ export default function Books() {
       {/* Book grid */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
         {filtered.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', flexDirection: 'column', gap: '12px', color: '#4b5563' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', flexDirection: 'column', gap: '12px', color: t.textFaint }}>
             <BookOpen size={40} />
             <p style={{ fontSize: '14px' }}>No books yet. Add one!</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px' }}>
             {filtered.map(book => (
-              <BookCard key={book.id} book={book} onClick={() => openEdit(book)} onDelete={deleteBook} />
+              <BookCard key={book.id} book={book} theme={t} onClick={() => openEdit(book)} onDelete={deleteBook} />
             ))}
           </div>
         )}
@@ -124,6 +125,7 @@ export default function Books() {
       {showModal && (
         <BookModal
           book={editBook}
+          theme={t}
           onClose={() => setShowModal(false)}
           onSaved={onSaved}
         />
@@ -132,19 +134,19 @@ export default function Books() {
   )
 }
 
-function BookCard({ book, onClick, onDelete }) {
+function BookCard({ book, theme: t, onClick, onDelete }) {
   return (
-    <div onClick={onClick} style={{ cursor: 'pointer', position: 'relative', group: true }}>
+    <div onClick={onClick} style={{ cursor: 'pointer', position: 'relative' }}>
       {/* Cover */}
       <div style={{
         width: '100%', aspectRatio: '2/3', borderRadius: '8px', overflow: 'hidden',
-        background: '#1e1e2a', border: '1px solid #2a2a35', marginBottom: '10px',
+        background: t.surface3, border: `1px solid ${t.border}`, marginBottom: '10px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         {book.cover_url ? (
           <img src={book.cover_url} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <BookOpen size={32} style={{ color: '#4b5563' }} />
+          <BookOpen size={32} style={{ color: t.textFaint }} />
         )}
         {/* Status badge */}
         <div style={{
@@ -166,28 +168,28 @@ function BookCard({ book, onClick, onDelete }) {
           <X size={12} />
         </button>
       </div>
-      <p style={{ fontSize: '13px', fontWeight: '600', color: '#e2e2e7', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</p>
-      <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.author}</p>
+      <p style={{ fontSize: '13px', fontWeight: '600', color: t.text, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</p>
+      <p style={{ fontSize: '12px', color: t.textMuted, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.author}</p>
       {book.rating > 0 && (
         <div style={{ display: 'flex', gap: '2px' }}>
           {[1,2,3,4,5].map(i => (
-            <Star key={i} size={11} fill={i <= book.rating ? '#facc15' : 'none'} stroke={i <= book.rating ? '#facc15' : '#4b5563'} />
+            <Star key={i} size={11} fill={i <= book.rating ? '#facc15' : 'none'} stroke={i <= book.rating ? '#facc15' : t.textFaint} />
           ))}
         </div>
       )}
       {book.status === 'reading' && book.total_pages > 0 && (
         <div style={{ marginTop: '4px' }}>
-          <div style={{ height: '3px', background: '#2a2a35', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '3px', background: t.border, borderRadius: '2px', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${Math.min(100, (book.current_page / book.total_pages) * 100)}%`, background: '#38bdf8', borderRadius: '2px' }} />
           </div>
-          <p style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>{book.current_page}/{book.total_pages} pages</p>
+          <p style={{ fontSize: '10px', color: t.textMuted, marginTop: '2px' }}>{book.current_page}/{book.total_pages} pages</p>
         </div>
       )}
     </div>
   )
 }
 
-function BookModal({ book, onClose, onSaved }) {
+function BookModal({ book, theme: t, onClose, onSaved }) {
   const isEdit = !!book
   const [form, setForm] = useState({
     title: book?.title || '',
@@ -239,12 +241,15 @@ function BookModal({ book, onClose, onSaved }) {
     setSaving(false)
   }
 
+  const modalInput = { width: '100%', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: '6px', padding: '8px 10px', color: t.text, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }
+  const modalLabel = { fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: '#16161e', border: '1px solid #2a2a35', borderRadius: '12px', width: '520px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
+      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '520px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#e2e2e7' }}>{isEdit ? 'Edit Book' : 'Add Book'}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={18} /></button>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>{isEdit ? 'Edit Book' : 'Add Book'}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
         <div style={{ display: 'flex', gap: '20px' }}>
@@ -252,9 +257,9 @@ function BookModal({ book, onClose, onSaved }) {
           <div style={{ flexShrink: 0 }}>
             <label style={{ cursor: 'pointer' }}>
               <div style={{
-                width: '110px', height: '165px', borderRadius: '8px', border: '2px dashed #2a2a35',
+                width: '110px', height: '165px', borderRadius: '8px', border: `2px dashed ${t.border}`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: '8px', color: '#4b5563', overflow: 'hidden', background: '#12121a',
+                gap: '8px', color: t.textFaint, overflow: 'hidden', background: t.surface1,
               }}>
                 {form.cover_url ? (
                   <img src={form.cover_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -273,19 +278,19 @@ function BookModal({ book, onClose, onSaved }) {
 
           {/* Fields */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <Field label="Title *" value={form.title} onChange={v => set('title', v)} placeholder="Book title" />
-            <Field label="Author" value={form.author} onChange={v => set('author', v)} placeholder="Author name" />
-            <Field label="Genre" value={form.genre} onChange={v => set('genre', v)} placeholder="e.g. Fiction, Science" />
+            <ModalField label="Title *" value={form.title} onChange={v => set('title', v)} placeholder="Book title" inputStyle={modalInput} labelStyle={modalLabel} />
+            <ModalField label="Author" value={form.author} onChange={v => set('author', v)} placeholder="Author name" inputStyle={modalInput} labelStyle={modalLabel} />
+            <ModalField label="Genre" value={form.genre} onChange={v => set('genre', v)} placeholder="e.g. Fiction, Science" inputStyle={modalInput} labelStyle={modalLabel} />
 
             {/* Status */}
             <div>
-              <label style={labelStyle}>Status</label>
+              <label style={modalLabel}>Status</label>
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                 {STATUSES.filter(s => s.key !== 'all').map(s => (
                   <button key={s.key} onClick={() => set('status', s.key)} style={{
                     flex: 1, padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '500',
-                    background: form.status === s.key ? '#7c3aed' : '#1e1e2a',
-                    color: form.status === s.key ? 'white' : '#9ca3af',
+                    background: form.status === s.key ? t.accentBtn : t.surface3,
+                    color: form.status === s.key ? 'white' : t.textMuted,
                   }}>{s.label}</button>
                 ))}
               </div>
@@ -293,13 +298,13 @@ function BookModal({ book, onClose, onSaved }) {
 
             {/* Star rating */}
             <div>
-              <label style={labelStyle}>Rating</label>
+              <label style={modalLabel}>Rating</label>
               <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                 {[1,2,3,4,5].map(i => (
                   <Star
                     key={i} size={22} style={{ cursor: 'pointer' }}
                     fill={(hoverStar || form.rating) >= i ? '#facc15' : 'none'}
-                    stroke={(hoverStar || form.rating) >= i ? '#facc15' : '#4b5563'}
+                    stroke={(hoverStar || form.rating) >= i ? '#facc15' : t.textFaint}
                     onMouseEnter={() => setHoverStar(i)}
                     onMouseLeave={() => setHoverStar(0)}
                     onClick={() => set('rating', i === form.rating ? 0 : i)}
@@ -313,35 +318,35 @@ function BookModal({ book, onClose, onSaved }) {
         {/* Progress (only if reading) */}
         {form.status === 'reading' && (
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-            <Field label="Current page" value={form.current_page} onChange={v => set('current_page', v)} type="number" />
-            <Field label="Total pages" value={form.total_pages} onChange={v => set('total_pages', v)} type="number" />
+            <ModalField label="Current page" value={form.current_page} onChange={v => set('current_page', v)} type="number" inputStyle={modalInput} labelStyle={modalLabel} />
+            <ModalField label="Total pages" value={form.total_pages} onChange={v => set('total_pages', v)} type="number" inputStyle={modalInput} labelStyle={modalLabel} />
           </div>
         )}
 
         {/* Review */}
         <div style={{ marginTop: '16px' }}>
-          <label style={labelStyle}>Review / Notes</label>
+          <label style={modalLabel}>Review / Notes</label>
           <textarea
             value={form.review}
             onChange={e => set('review', e.target.value)}
             placeholder="Your thoughts on this book..."
             rows={3}
-            style={{ ...inputStyle, resize: 'vertical', marginTop: '6px' }}
+            style={{ ...modalInput, resize: 'vertical', marginTop: '6px' }}
           />
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
-          <button onClick={save} disabled={saving} style={{ ...primaryBtn, flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}>
+          <button onClick={save} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: t.accentBtn, border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500', flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}>
             {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Book'}
           </button>
-          <button onClick={onClose} style={{ ...ghostBtn, flex: 1 }}>Cancel</button>
+          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 16px', color: t.textMuted, fontSize: '13px', cursor: 'pointer', flex: 1 }}>Cancel</button>
         </div>
       </div>
     </div>
   )
 }
 
-function Field({ label, value, onChange, placeholder, type = 'text' }) {
+function ModalField({ label, value, onChange, placeholder, type = 'text', inputStyle, labelStyle }) {
   return (
     <div>
       <label style={labelStyle}>{label}</label>
@@ -354,19 +359,4 @@ function Field({ label, value, onChange, placeholder, type = 'text' }) {
       />
     </div>
   )
-}
-
-const labelStyle = { fontSize: '11px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }
-const inputStyle = {
-  width: '100%', background: '#12121a', border: '1px solid #2a2a35', borderRadius: '6px',
-  padding: '8px 10px', color: '#e2e2e7', fontSize: '13px', outline: 'none', boxSizing: 'border-box',
-}
-const primaryBtn = {
-  display: 'flex', alignItems: 'center', gap: '6px',
-  background: '#7c3aed', border: 'none', borderRadius: '8px',
-  padding: '8px 16px', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '500',
-}
-const ghostBtn = {
-  background: 'transparent', border: '1px solid #2a2a35', borderRadius: '8px',
-  padding: '8px 16px', color: '#9ca3af', fontSize: '13px', cursor: 'pointer',
 }
