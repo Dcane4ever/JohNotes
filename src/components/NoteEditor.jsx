@@ -9,16 +9,16 @@ import { TaskItem } from '@tiptap/extension-task-item'
 
 const SAVE_DELAY = 1000
 
-export default function NoteEditor({ note, onSave, theme = 'dark' }) {
-  const isDark = theme === 'dark'
-  const toolbarBg = isDark ? '#16161e' : '#e4e4ef'
-  const borderColor = isDark ? '#2a2a35' : '#c8c8d8'
-  const titleColor = isDark ? '#e2e2e7' : '#1a1a2e'
-  const editorTextColor = isDark ? '#d1d5db' : '#2d2d3d'
-  const editorHeadingColor = isDark ? '#e2e2e7' : '#1a1a2e'
-  const placeholderColor = isDark ? '#4b5563' : '#a0a0b8'
-  const markerColor = isDark ? '#9ca3af' : '#6b7280'
-  const dividerColor = isDark ? '#2a2a35' : '#c8c8d8'
+export default function NoteEditor({ note, onSave, theme = {} }) {
+  const toolbarBg = theme.surface2 || '#16161e'
+  const borderColor = theme.border || '#2a2a35'
+  const titleColor = theme.text || '#e2e2e7'
+  const editorTextColor = theme.textMuted || '#d1d5db'
+  const editorHeadingColor = theme.text || '#e2e2e7'
+  const placeholderColor = theme.textFaint || '#4b5563'
+  const markerColor = theme.textMuted || '#9ca3af'
+  const dividerColor = theme.border || '#2a2a35'
+  const isDark = theme.dark !== false
 
   const [title, setTitle] = useState(note.title || '')
   const [saveStatus, setSaveStatus] = useState('saved')

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { BookOpen, BookMarked, Calendar, FileText, Search, Sun, Moon, X } from 'lucide-react'
+import { BookOpen, BookMarked, Calendar, FileText, Search, X, Palette } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { THEMES } from '../lib/themes'
 
 const links = [
   { to: '/', icon: BookOpen, label: 'Notebook' },
@@ -10,24 +11,29 @@ const links = [
   { to: '/rrl', icon: FileText, label: 'RRL' },
 ]
 
-export default function Sidebar({ theme, onToggleTheme }) {
+export default function Sidebar({ themeKey, theme, onThemeChange }) {
   const [search, setSearch] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
+  const [showThemePicker, setShowThemePicker] = useState(false)
   const navigate = useNavigate()
+
+  const bg = theme.surface2
+  const border = theme.border
+  const text = theme.textMuted
+  const activeText = theme.accent
+  const activeBg = theme.accentBg
 
   async function handleSearch(val) {
     setSearch(val)
     if (!val.trim()) { setResults([]); return }
     setSearching(true)
     const q = val.toLowerCase()
-
     const [{ data: notes }, { data: books }, { data: rrl }] = await Promise.all([
       supabase.from('notes').select('id, title, subject_id').ilike('title', `%${q}%`).limit(4),
       supabase.from('books').select('id, title, author').ilike('title', `%${q}%`).limit(4),
       supabase.from('rrl_entries').select('id, title').ilike('title', `%${q}%`).limit(4),
     ])
-
     const combined = [
       ...(notes || []).map(n => ({ ...n, type: 'note', label: n.title || 'Untitled', path: '/' })),
       ...(books || []).map(b => ({ ...b, type: 'book', label: b.title, path: '/books' })),
@@ -43,13 +49,6 @@ export default function Sidebar({ theme, onToggleTheme }) {
     setResults([])
   }
 
-  const isDark = theme === 'dark'
-  const bg = isDark ? '#16161e' : '#f8f8fc'
-  const border = isDark ? '#2a2a35' : '#e2e2e7'
-  const text = isDark ? '#9ca3af' : '#6b7280'
-  const activeText = isDark ? '#c084fc' : '#7c3aed'
-  const activeBg = isDark ? 'rgba(192,132,252,0.1)' : 'rgba(124,58,237,0.08)'
-
   const TYPE_ICONS = { note: '📓', book: '📚', rrl: '📄' }
   const TYPE_LABELS = { note: 'Note', book: 'Book', rrl: 'RRL' }
 
@@ -60,13 +59,46 @@ export default function Sidebar({ theme, onToggleTheme }) {
       flexDirection: 'column', padding: '20px 12px', gap: '4px',
       flexShrink: 0, position: 'relative',
     }}>
-      {/* Logo + theme toggle */}
+      {/* Logo + theme button */}
       <div style={{ padding: '0 12px 16px', borderBottom: `1px solid ${border}`, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '20px', fontWeight: '700', color: '#c084fc', letterSpacing: '-0.5px' }}>Amenō</span>
-        <button onClick={onToggleTheme} style={{ background: 'none', border: 'none', cursor: 'pointer', color: text, display: 'flex', padding: '4px' }}>
-          {isDark ? <Sun size={15} /> : <Moon size={15} />}
+        <span style={{ fontSize: '20px', fontWeight: '700', color: theme.accent, letterSpacing: '-0.5px' }}>Amenō</span>
+        <button onClick={() => setShowThemePicker(p => !p)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: text, display: 'flex', padding: '4px' }} title="Change theme">
+          <Palette size={15} />
         </button>
       </div>
+
+      {/* Theme picker */}
+      {showThemePicker && (
+        <div style={{
+          position: 'absolute', top: '60px', left: '12px', right: '12px',
+          background: theme.surface1, border: `1px solid ${border}`, borderRadius: '10px',
+          padding: '12px', zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+        }}>
+          <p style={{ fontSize: '11px', fontWeight: '600', color: text, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Theme</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {Object.entries(THEMES).map(([key, t]) => (
+              <button
+                key={key}
+                onClick={() => { onThemeChange(key); setShowThemePicker(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                  padding: '8px 10px', borderRadius: '7px', border: 'none', cursor: 'pointer',
+                  background: themeKey === key ? theme.accentBg : 'transparent',
+                  textAlign: 'left',
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>{t.emoji}</span>
+                <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
+                  {[t.bg, t.accent, t.surface2, t.text].map((c, i) => (
+                    <div key={i} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.1)' }} />
+                  ))}
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: themeKey === key ? '600' : '400', color: themeKey === key ? theme.accent : text }}>{t.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Global search */}
       <div style={{ position: 'relative', marginBottom: '8px' }}>
@@ -76,9 +108,9 @@ export default function Sidebar({ theme, onToggleTheme }) {
           onChange={e => handleSearch(e.target.value)}
           placeholder="Search everything..."
           style={{
-            width: '100%', boxSizing: 'border-box', background: isDark ? '#12121a' : '#ededf5',
-            border: `1px solid ${border}`, borderRadius: '7px', padding: '7px 28px 7px 28px',
-            color: isDark ? '#e2e2e7' : '#1a1a2e', fontSize: '12px', outline: 'none',
+            width: '100%', boxSizing: 'border-box', background: theme.surface1,
+            border: `1px solid ${border}`, borderRadius: '7px', padding: '7px 28px',
+            color: theme.text, fontSize: '12px', outline: 'none',
           }}
         />
         {search && (
@@ -86,12 +118,10 @@ export default function Sidebar({ theme, onToggleTheme }) {
             <X size={12} />
           </button>
         )}
-
-        {/* Search results dropdown */}
         {search && (
           <div style={{
             position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-            background: isDark ? '#16161e' : '#fff', border: `1px solid ${border}`,
+            background: theme.surface2, border: `1px solid ${border}`,
             borderRadius: '8px', zIndex: 100, overflow: 'hidden',
             boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
           }}>
@@ -102,12 +132,12 @@ export default function Sidebar({ theme, onToggleTheme }) {
                 padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
                 borderBottom: `1px solid ${border}`,
               }}
-                onMouseEnter={e => e.currentTarget.style.background = isDark ? '#1e1e2a' : '#f0f0f8'}
+                onMouseEnter={e => e.currentTarget.style.background = theme.surface3}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <span style={{ fontSize: '14px' }}>{TYPE_ICONS[r.type]}</span>
                 <div>
-                  <p style={{ fontSize: '12px', fontWeight: '600', color: isDark ? '#e2e2e7' : '#1a1a2e', margin: 0 }}>{r.label}</p>
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: theme.text, margin: 0 }}>{r.label}</p>
                   <p style={{ fontSize: '10px', color: text, margin: 0 }}>{TYPE_LABELS[r.type]}</p>
                 </div>
               </div>

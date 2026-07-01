@@ -7,15 +7,14 @@ const COLORS = ['#c084fc', '#f472b6', '#fb923c', '#facc15', '#4ade80', '#38bdf8'
 const NOTE_COLORS = ['#c084fc', '#f472b6', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#818cf8', '#f87171', '#94a3b8']
 const ICONS = ['📓', '📚', '🔬', '💻', '🎨', '📐', '🧪', '📖', '✏️', '🗂️']
 
-export default function Notebook({ theme = 'dark' }) {
-  const isDark = theme === 'dark'
-  const panelBg1 = isDark ? '#12121a' : '#e8e8f0'
-  const panelBg2 = isDark ? '#16161e' : '#ededf5'
-  const borderColor = isDark ? '#2a2a35' : '#d4d4e0'
-  const textMuted = isDark ? '#9ca3af' : '#6b7280'
-  const textActive = isDark ? '#e2e2e7' : '#1a1a2e'
-  const inputBg = isDark ? '#1e1e2a' : '#dcdce8'
-  const menuBg = isDark ? '#1e1e2a' : '#ffffff'
+export default function Notebook({ theme = {} }) {
+  const panelBg1 = theme.surface1 || '#12121a'
+  const panelBg2 = theme.surface2 || '#16161e'
+  const borderColor = theme.border || '#2a2a35'
+  const textMuted = theme.textMuted || '#9ca3af'
+  const textActive = theme.text || '#e2e2e7'
+  const inputBg = theme.surface3 || '#1e1e2a'
+  const menuBg = theme.surface3 || '#1e1e2a'
 
   const [subjects, setSubjects] = useState([])
   const [notes, setNotes] = useState([])

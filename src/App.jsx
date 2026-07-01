@@ -5,25 +5,24 @@ import Notebook from './pages/Notebook'
 import Books from './pages/Books'
 import Schedule from './pages/Schedule'
 import RRL from './pages/RRL'
+import { THEMES, applyTheme } from './lib/themes'
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('johnotes-theme') || 'dark')
+  const [themeKey, setThemeKey] = useState(() => localStorage.getItem('ameno-theme') || 'dark-purple')
 
   useEffect(() => {
-    document.body.style.background = theme === 'dark' ? '#0f0f13' : '#f0f0f8'
-    document.body.style.color = theme === 'dark' ? '#e2e2e7' : '#1a1a2e'
-    localStorage.setItem('johnotes-theme', theme)
-  }, [theme])
+    const t = THEMES[themeKey] || THEMES['dark-purple']
+    applyTheme(t)
+    localStorage.setItem('ameno-theme', themeKey)
+  }, [themeKey])
 
-  function toggleTheme() {
-    setTheme(t => t === 'dark' ? 'light' : 'dark')
-  }
+  const theme = THEMES[themeKey] || THEMES['dark-purple']
 
   return (
     <BrowserRouter basename="/JohNotes">
-      <div style={{ display: 'flex', minHeight: '100vh' }}>
-        <Sidebar theme={theme} onToggleTheme={toggleTheme} />
-        <main style={{ flex: 1, overflow: 'auto', background: theme === 'dark' ? '#0f0f13' : '#f0f0f8' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+        <Sidebar themeKey={themeKey} theme={theme} onThemeChange={setThemeKey} />
+        <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg)' }}>
           <Routes>
             <Route path="/" element={<Notebook theme={theme} />} />
             <Route path="/books" element={<Books theme={theme} />} />
