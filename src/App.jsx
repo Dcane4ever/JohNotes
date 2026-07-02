@@ -24,7 +24,7 @@ function AppInner({ themeKey, setThemeKey, theme }) {
   useEffect(() => { setSidebarOpen(false) }, [location.pathname])
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', position: 'relative', flex: 1, minWidth: 0 }}>
 
       {/* Mobile hamburger */}
       {isMobile && (
