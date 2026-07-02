@@ -45,6 +45,7 @@ const IframeNode = Node.create({
         iframe.src = src
         iframe.style.cssText = `width:100%;height:${node.attrs.height}px;border:none;border-radius:8px;display:block;`
         iframe.allowFullscreen = true
+        iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture'
         dom.appendChild(iframe)
       } else {
         // Broken/malformed embed — show placeholder instead of loading a 404 page
@@ -374,7 +375,12 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
       Placeholder.configure({ placeholder: "Start writing... type '/' for commands" }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Link.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' } }),
+      Link.configure({
+        openOnClick: false,
+        protocols: ['ameno'],
+        isAllowedUri: (url, ctx) => url.startsWith('ameno://') || ctx.defaultValidate(url),
+        HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
+      }),
       Highlight.configure({ multicolor: true }),
       TextStyle,
       Image.configure({ inline: false, allowBase64: false }),
