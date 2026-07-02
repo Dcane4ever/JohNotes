@@ -307,7 +307,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
       Placeholder.configure({ placeholder: "Start writing... type '/' for commands" }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Link.configure({ openOnClick: true, HTMLAttributes: { rel: 'noopener noreferrer' } }),
+      Link.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' } }),
       Highlight.configure({ multicolor: true }),
       TextStyle,
       Image.configure({ inline: false, allowBase64: false }),
@@ -1041,6 +1041,18 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
           ref={editorWrapRef}
           onMouseMove={handleEditorMouseMove}
           onMouseLeave={handleEditorMouseLeave}
+          onClick={e => {
+            const a = e.target.closest('a')
+            if (!a) return
+            const href = a.getAttribute('href') || ''
+            if (href.startsWith('ameno://note/')) {
+              e.preventDefault()
+              document.dispatchEvent(new CustomEvent('ameno-note-link', { detail: href.replace('ameno://note/', '') }))
+            } else if (href.startsWith('http')) {
+              e.preventDefault()
+              window.open(href, '_blank', 'noopener,noreferrer')
+            }
+          }}
           style={{ flex: 1, padding: '0 16px 120px 32px', position: 'relative', minWidth: 0 }}
         >
           <style>{getEditorCSS(editorTextColor, editorHeadingColor, placeholderColor, markerColor)}</style>

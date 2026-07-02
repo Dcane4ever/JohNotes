@@ -61,15 +61,10 @@ export default function Notebook({ theme = {} }) {
   // Handle note links — ameno://note/<id>
   useEffect(() => {
     function handleNoteLink(e) {
-      const href = e.target.closest('a')?.href || ''
-      if (href.startsWith('ameno://note/')) {
-        e.preventDefault()
-        const id = href.replace('ameno://note/', '')
-        openNoteById(id)
-      }
+      openNoteById(e.detail)
     }
-    document.addEventListener('click', handleNoteLink)
-    return () => document.removeEventListener('click', handleNoteLink)
+    document.addEventListener('ameno-note-link', handleNoteLink)
+    return () => document.removeEventListener('ameno-note-link', handleNoteLink)
   }, [subjects])
 
   async function openNoteById(id) {
