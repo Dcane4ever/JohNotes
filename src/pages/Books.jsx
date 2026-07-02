@@ -73,7 +73,7 @@ export default function Books({ theme = {} }) {
       </div>
 
       {/* Status filter */}
-      <div style={{ padding: '16px 28px 0', display: 'flex', gap: '8px', flexShrink: 0 }}>
+      <div style={{ padding: '16px 28px 0', display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
         {STATUSES.map(s => (
           <button key={s.key} onClick={() => setFilter(s.key)} style={{
             padding: '6px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer',
@@ -286,7 +286,7 @@ function BookModal({ book, theme: t, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '520px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
+      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: 'min(520px, calc(100vw - 32px))', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>{isEdit ? 'Edit Book' : 'Add Book'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={18} /></button>

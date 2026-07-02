@@ -332,6 +332,13 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
   // Selected block node (image/iframe/codeBlock) → show delete bar
   const [selectedBlock, setSelectedBlock] = useState(null) // {type, rect: {top,left,width}}
 
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+  useEffect(() => {
+    function onResize() { setIsMobile(window.innerWidth <= 768) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const editorWrapRef = useRef(null)
   const editorScrollRef = useRef(null)
   const saveTimer = useRef(null)
@@ -707,7 +714,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Toolbar */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '2px',
+        display: 'flex', alignItems: 'center', gap: '2px', flexWrap: 'wrap',
         padding: '8px 16px', borderBottom: `1px solid ${borderColor}`,
         background: toolbarBg,
       }}>
@@ -1082,7 +1089,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
       {embedModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
           onClick={() => setEmbedModal(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: theme.surface2, border: `1px solid ${borderColor}`, borderRadius: '12px', padding: '24px', width: '420px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: theme.surface2, border: `1px solid ${borderColor}`, borderRadius: '12px', padding: '24px', width: 'min(420px, calc(100vw - 32px))', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
             <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: '700', color: theme.text }}>
               {embedModal.type === 'image' ? '🖼️ Insert Image' : embedModal.type === 'video' ? '▶️ Embed Video' : embedModal.type === 'math' ? '∑ Insert Equation' : '</> Embed Widget'}
             </h3>
@@ -1130,7 +1137,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
       {/* TOC panel */}
       {showToc && (
         <div style={{
-          position: 'absolute', right: '196px', top: '48px', zIndex: 100,
+          position: 'absolute', right: isMobile ? '12px' : '196px', top: '48px', zIndex: 100,
           background: toolbarBg, border: `1px solid ${borderColor}`, borderRadius: '10px',
           padding: '12px', minWidth: '200px', maxWidth: '260px',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)', maxHeight: '60vh', overflowY: 'auto',
@@ -1184,7 +1191,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
             }
             // anything else (malformed, iframe strings, etc) — do nothing
           }}
-          style={{ flex: 1, padding: '0 16px 120px 32px', position: 'relative', minWidth: 0 }}
+          style={{ flex: 1, padding: isMobile ? '0 12px 120px 16px' : '0 16px 120px 32px', position: 'relative', minWidth: 0 }}
         >
           <style>{getEditorCSS(editorTextColor, editorHeadingColor, placeholderColor, markerColor, noteStyle.fontSize, EDITOR_FONTS[noteStyle.font]?.css || EDITOR_FONTS.sans.css)}</style>
           <div style={{ zoom: noteStyle.zoom / 100 }}>
@@ -1216,8 +1223,8 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
           })()}
         </div>
 
-        {/* Sidenotes margin column */}
-        <div style={{ width: '180px', flexShrink: 0, position: 'relative' }}>
+        {/* Sidenotes margin column — hidden on mobile */}
+        <div style={{ width: isMobile ? '0px' : '180px', flexShrink: 0, position: 'relative', display: isMobile ? 'none' : 'block' }}>
           {sidenotes.map(s => (
             <div key={s.id} style={{ position: 'absolute', top: getParaTop(s.paragraph_index), left: '8px', right: '4px' }}>
               {editingSidenote?.id === s.id ? (

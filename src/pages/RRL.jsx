@@ -63,9 +63,9 @@ export default function RRL({ theme = {} }) {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, flexWrap: 'wrap', gap: '8px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: t.text }}>RRL Compiler</h1>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* View toggle */}
           <div style={{ display: 'flex', background: t.surface3, borderRadius: '8px', padding: '3px', gap: '2px' }}>
             {VIEW_BTNS.map(({ key, icon: Icon, title }) => (
@@ -396,7 +396,7 @@ function AddToNotebookModal({ entry, theme: t, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '400px', padding: '24px' }}>
+      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: 'min(400px, calc(100vw - 32px))', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>Add to Notebook</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={16} /></button>
@@ -470,7 +470,7 @@ function EntryModal({ entry, theme: t, onClose, onSaved, onDelete }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '540px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
+      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: 'min(540px, calc(100vw - 32px))', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>{isEdit ? 'Edit Entry' : 'Add RRL Entry'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={18} /></button>

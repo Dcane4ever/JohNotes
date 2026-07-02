@@ -109,8 +109,8 @@ export default function Schedule({ theme = {} }) {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: t.text }}>Schedule</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <button onClick={() => setCurrent(new Date(year, month - 1))} style={schedIconBtn}><ChevronLeft size={16} /></button>
@@ -139,7 +139,7 @@ export default function Schedule({ theme = {} }) {
       </div>
 
       {/* Calendar grid */}
-      <div style={{ flex: 1, padding: '4px 28px 20px', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '1fr', gap: '4px', overflow: 'hidden' }}>
+      <div style={{ flex: 1, padding: '4px 28px 20px', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(72px, 1fr)', gap: '4px', overflow: 'auto' }}>
         {cells.map((day, i) => {
           const dayEvents = getEventsForDay(day)
           return (
@@ -184,7 +184,7 @@ export default function Schedule({ theme = {} }) {
       {dayDetail && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
           onClick={() => setDayDetail(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '360px', maxHeight: '80vh', overflowY: 'auto', padding: '20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: 'min(360px, calc(100vw - 32px))', maxHeight: '80vh', overflowY: 'auto', padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>
                 {MONTHS[month]} {dayDetail.day}, {year}
@@ -309,7 +309,7 @@ function EventModal({ event, defaultDate, theme: t = {}, onClose, onSaved, onDel
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: '460px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
+      <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: '12px', width: 'min(460px, calc(100vw - 32px))', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>{isEdit ? 'Edit Event' : 'New Event'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer' }}><X size={18} /></button>

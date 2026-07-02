@@ -209,7 +209,7 @@ function SearchPreview({ preview, theme, onClose, onNavigate }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
         background: theme.surface1, border: `1px solid ${border}`, borderRadius: '12px',
-        width: '480px', maxHeight: '80vh', overflowY: 'auto', padding: '24px',
+        width: 'min(480px, calc(100vw - 32px))', maxHeight: '80vh', overflowY: 'auto', padding: '24px',
         boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>

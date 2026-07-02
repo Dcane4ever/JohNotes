@@ -23,25 +23,10 @@ body {
   display: flex;
 }
 
-/* Mobile: hide sidebar, stack layout */
+/* Mobile: sidebar is a slide-in drawer (handled in App.jsx); keep it vertical */
 @media (max-width: 768px) {
   aside {
-    width: 100% !important;
-    min-height: auto !important;
-    flex-direction: row !important;
-    padding: 12px !important;
-    gap: 8px !important;
-    flex-wrap: wrap;
-    position: sticky !important;
-    top: 0;
-    z-index: 10;
-  }
-
-  #root > div {
-    flex-direction: column !important;
-  }
-
-  main {
-    width: 100% !important;
+    height: 100vh;
+    overflow-y: auto;
   }
 }
