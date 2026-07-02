@@ -33,14 +33,44 @@ const IframeNode = Node.create({
     })]
   },
   addNodeView() {
-    return ({ node }) => {
+    return ({ node, getPos, editor }) => {
       const dom = document.createElement('div')
-      dom.style.cssText = 'margin:12px 0;border-radius:8px;overflow:hidden;'
-      const iframe = document.createElement('iframe')
-      iframe.src = node.attrs.src
-      iframe.style.cssText = `width:100%;height:${node.attrs.height}px;border:none;border-radius:8px;display:block;`
-      iframe.allowFullscreen = true
-      dom.appendChild(iframe)
+      dom.style.cssText = 'margin:12px 0;border-radius:8px;overflow:hidden;position:relative;'
+
+      const src = node.attrs.src || ''
+      const validSrc = /^https?:\/\//.test(src)
+
+      if (validSrc) {
+        const iframe = document.createElement('iframe')
+        iframe.src = src
+        iframe.style.cssText = `width:100%;height:${node.attrs.height}px;border:none;border-radius:8px;display:block;`
+        iframe.allowFullscreen = true
+        dom.appendChild(iframe)
+      } else {
+        // Broken/malformed embed — show placeholder instead of loading a 404 page
+        const placeholder = document.createElement('div')
+        placeholder.style.cssText = 'padding:24px;border:1px dashed #6b7280;border-radius:8px;color:#9ca3af;font-size:13px;text-align:center;'
+        placeholder.textContent = '⚠️ Broken embed — invalid URL. Hover and click ✕ to remove.'
+        dom.appendChild(placeholder)
+      }
+
+      // Hover delete button (works even though clicks land inside the iframe)
+      const delBtn = document.createElement('button')
+      delBtn.textContent = '✕'
+      delBtn.title = 'Delete embed'
+      delBtn.style.cssText = 'position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;border:none;background:rgba(0,0,0,0.65);color:#fff;cursor:pointer;font-size:13px;line-height:1;display:none;z-index:5;'
+      delBtn.onmousedown = e => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (typeof getPos === 'function') {
+          const pos = getPos()
+          editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run()
+        }
+      }
+      dom.appendChild(delBtn)
+      dom.onmouseenter = () => { if (editor.isEditable) delBtn.style.display = 'block' }
+      dom.onmouseleave = () => { delBtn.style.display = 'none' }
+
       return { dom }
     }
   },
@@ -476,8 +506,16 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
   }
 
   function insertEmbed() {
-    const url = embedUrl.trim()
+    let url = embedUrl.trim()
     if (!url) return
+    // If full <iframe> embed code was pasted, extract the src URL
+    const iframeMatch = url.match(/<iframe[^>]*\ssrc=["']([^"']+)["']/i)
+    if (iframeMatch) url = iframeMatch[1]
+    // Reject anything that still isn't a URL (except math which is LaTeX)
+    if (embedModal.type !== 'math' && !/^https?:\/\//.test(url)) {
+      alert('That doesn\'t look like a valid URL. Paste a link starting with https://')
+      return
+    }
     if (embedModal.type === 'math') {
       editor.chain().focus().insertBlockMath({ latex: url }).run()
       setEmbedModal(null); setEmbedUrl(''); return
