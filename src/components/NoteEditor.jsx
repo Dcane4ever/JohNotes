@@ -278,6 +278,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
   const [selectedBlock, setSelectedBlock] = useState(null) // {type, rect: {top,left,width}}
 
   const editorWrapRef = useRef(null)
+  const editorScrollRef = useRef(null)
   const saveTimer = useRef(null)
   const imageInputRef = useRef(null)
 
@@ -379,6 +380,15 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  // Close slash menu on scroll
+  useEffect(() => {
+    if (!slashMenu) return
+    function onScroll() { setSlashMenu(null) }
+    const scroller = editorScrollRef.current
+    if (scroller) scroller.addEventListener('scroll', onScroll, { passive: true })
+    return () => { if (scroller) scroller.removeEventListener('scroll', onScroll) }
+  }, [slashMenu])
 
   // Slash menu keyboard nav
   useEffect(() => {
@@ -1041,7 +1051,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
       )}
 
       {/* Editor + sidenotes layout */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative' }}>
+      <div ref={editorScrollRef} style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative' }}>
         {/* Editor column */}
         <div
           ref={editorWrapRef}
