@@ -28,6 +28,13 @@ export default function Notebook({ theme = {} }) {
   const [newSubjectIcon, setNewSubjectIcon] = useState(ICONS[0])
   const [subjectsCollapsed, setSubjectsCollapsed] = useState(() => window.innerWidth <= 768)
   const [notesCollapsed, setNotesCollapsed] = useState(() => window.innerWidth <= 768)
+  const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768)
+
+  useEffect(() => {
+    function onResize() { setIsMobileView(window.innerWidth <= 768) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
   const [subjectMenu, setSubjectMenu] = useState(null)
   const [noteMenu, setNoteMenu] = useState(null)
   const [renamingSubject, setRenamingSubject] = useState(null)
@@ -223,7 +230,10 @@ export default function Notebook({ theme = {} }) {
                     />
                   ) : (
                     <div
-                      onClick={() => { setActiveSubject(s); setActiveNote(null) }}
+                      onClick={() => {
+                        setActiveSubject(s); setActiveNote(null)
+                        if (isMobileView) { setSubjectsCollapsed(true); setNotesCollapsed(false) }
+                      }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '7px', padding: '7px 6px',
                         borderRadius: '6px', cursor: 'pointer', marginBottom: '1px',
@@ -357,7 +367,10 @@ export default function Notebook({ theme = {} }) {
                   />
                 ) : (
                   <div
-                    onClick={() => setActiveNote(n)}
+                    onClick={() => {
+                      setActiveNote(n)
+                      if (isMobileView) { setSubjectsCollapsed(true); setNotesCollapsed(true) }
+                    }}
                     onContextMenu={e => handleNoteRightClick(e, n)}
                     style={{
                       padding: '8px 6px', borderRadius: '6px', cursor: 'pointer', marginBottom: '1px',
