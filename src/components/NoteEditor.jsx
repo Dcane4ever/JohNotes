@@ -9,7 +9,7 @@ import Image from '@tiptap/extension-image'
 import Mathematics from '@tiptap/extension-mathematics'
 import 'katex/dist/katex.min.css'
 import { supabase } from '../lib/supabase'
-import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, StickyNote, Highlighter, BookOpen, Download } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Heading2, Strikethrough, CheckSquare, Link2, Link2Off, Plus, StickyNote, Highlighter, BookOpen, Download, ZoomIn, ZoomOut, Type } from 'lucide-react'
 import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 
@@ -223,6 +223,15 @@ const HIGHLIGHT_COLORS = [
   { color: '#fed7aa', label: 'Orange' },
 ]
 
+const EDITOR_FONTS = {
+  sans: { label: 'Default', css: `system-ui, -apple-system, sans-serif` },
+  serif: { label: 'Serif', css: `Georgia, 'Times New Roman', serif` },
+  mono: { label: 'Mono', css: `'JetBrains Mono', 'Fira Code', Consolas, monospace` },
+  hand: { label: 'Handwritten', css: `'Segoe Print', 'Comic Sans MS', cursive` },
+}
+
+const FONT_SIZES = [12, 13, 15, 17, 19, 22]
+
 const SLASH_COMMANDS = [
   // Text
   { label: 'Text', description: 'Plain paragraph', icon: '¶', action: (ed) => ed.chain().focus().setParagraph().run() },
@@ -260,6 +269,22 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
   const [showNoteLinkPicker, setShowNoteLinkPicker] = useState(false)
   const [noteLinkQuery, setNoteLinkQuery] = useState('')
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [showTypeMenu, setShowTypeMenu] = useState(false)
+  const [noteStyle, setNoteStyle] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`ameno-notestyle-${note.id}`))
+      if (saved) return { zoom: 100, fontSize: 15, font: 'sans', ...saved }
+    } catch {}
+    return { zoom: 100, fontSize: 15, font: 'sans' }
+  })
+
+  function updateNoteStyle(patch) {
+    setNoteStyle(prev => {
+      const next = { ...prev, ...patch }
+      localStorage.setItem(`ameno-notestyle-${note.id}`, JSON.stringify(next))
+      return next
+    })
+  }
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [bubble, setBubble] = useState(null) // {x, y, hasLink}
@@ -376,6 +401,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
       setBubble(null)
       setSlashMenu(null)
       setShowHighlightPicker(false)
+      setShowTypeMenu(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -703,6 +729,53 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
           {editor.isActive('link') ? <Link2Off size={14} /> : <Link2 size={14} />}
         </ToolBtn>
         <div style={{ flex: 1 }} />
+        {/* Zoom controls */}
+        <ToolBtn onClick={() => updateNoteStyle({ zoom: Math.max(30, noteStyle.zoom - 10) })} title="Zoom out" theme={theme}><ZoomOut size={14} /></ToolBtn>
+        <span
+          onClick={() => updateNoteStyle({ zoom: 100 })}
+          title="Reset zoom"
+          style={{ fontSize: '11px', color: theme.textMuted, minWidth: '34px', textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
+        >{noteStyle.zoom}%</span>
+        <ToolBtn onClick={() => updateNoteStyle({ zoom: Math.min(200, noteStyle.zoom + 10) })} title="Zoom in" theme={theme}><ZoomIn size={14} /></ToolBtn>
+        {/* Font settings */}
+        <div style={{ position: 'relative' }}>
+          <ToolBtn onClick={() => setShowTypeMenu(p => !p)} active={showTypeMenu} title="Font settings" theme={theme}><Type size={14} /></ToolBtn>
+          {showTypeMenu && (
+            <div onMouseDown={e => e.stopPropagation()} style={{
+              position: 'absolute', top: '34px', right: 0, zIndex: 9999,
+              background: toolbarBg, border: `1px solid ${borderColor}`, borderRadius: '10px',
+              padding: '10px', minWidth: '190px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}>
+              <p style={{ fontSize: '10px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px' }}>Font</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '10px' }}>
+                {Object.entries(EDITOR_FONTS).map(([key, f]) => (
+                  <button key={key} onClick={() => updateNoteStyle({ font: key })} style={{
+                    background: noteStyle.font === key ? theme.accentBg : 'none',
+                    border: 'none', borderRadius: '6px', padding: '6px 8px', textAlign: 'left', cursor: 'pointer',
+                    fontSize: '13px', color: noteStyle.font === key ? theme.accent : theme.text,
+                    fontFamily: f.css,
+                  }}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: '10px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px' }}>Size</p>
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {FONT_SIZES.map(sz => (
+                  <button key={sz} onClick={() => updateNoteStyle({ fontSize: sz })} style={{
+                    background: noteStyle.fontSize === sz ? theme.accentBg : theme.surface1,
+                    border: `1px solid ${noteStyle.fontSize === sz ? theme.accent : borderColor}`,
+                    borderRadius: '6px', padding: '4px 8px', cursor: 'pointer',
+                    fontSize: '12px', color: noteStyle.fontSize === sz ? theme.accent : theme.textMuted,
+                  }}>
+                    {sz}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ width: '1px', height: '20px', background: dividerColor, margin: '0 4px' }} />
         {/* Note-to-note link button */}
         <div style={{ position: 'relative' }}>
           <ToolBtn onClick={() => { setShowNoteLinkPicker(p => !p); setNoteLinkQuery('') }} active={showNoteLinkPicker} title="Link to note" theme={theme}>
@@ -1071,8 +1144,10 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
           }}
           style={{ flex: 1, padding: '0 16px 120px 32px', position: 'relative', minWidth: 0 }}
         >
-          <style>{getEditorCSS(editorTextColor, editorHeadingColor, placeholderColor, markerColor)}</style>
-          <EditorContent editor={editor} />
+          <style>{getEditorCSS(editorTextColor, editorHeadingColor, placeholderColor, markerColor, noteStyle.fontSize, EDITOR_FONTS[noteStyle.font]?.css || EDITOR_FONTS.sans.css)}</style>
+          <div style={{ zoom: noteStyle.zoom / 100 }}>
+            <EditorContent editor={editor} />
+          </div>
 
           {/* Hover sidenote button */}
           {hoveredPara !== null && (() => {
@@ -1234,9 +1309,9 @@ function ToolBtn({ onClick, active, children, title, theme }) {
   )
 }
 
-function getEditorCSS(text, heading, placeholder, marker) {
+function getEditorCSS(text, heading, placeholder, marker, fontSize = 15, fontFamily = 'system-ui, sans-serif') {
   return `
-.tiptap { outline: none; font-size: 15px; line-height: 1.7; color: ${text}; min-height: 300px; max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
+.tiptap { outline: none; font-size: ${fontSize}px; font-family: ${fontFamily}; line-height: 1.7; color: ${text}; min-height: 300px; max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
 .tiptap p { white-space: pre-wrap; }
 .tiptap p { margin: 0 0 8px; }
 .tiptap h2 { font-size: 20px; font-weight: 600; color: ${heading}; margin: 20px 0 8px; }
