@@ -1236,7 +1236,8 @@ function ToolBtn({ onClick, active, children, title, theme }) {
 
 function getEditorCSS(text, heading, placeholder, marker) {
   return `
-.tiptap { outline: none; font-size: 15px; line-height: 1.7; color: ${text}; min-height: 300px; }
+.tiptap { outline: none; font-size: 15px; line-height: 1.7; color: ${text}; min-height: 300px; max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
+.tiptap p { white-space: pre-wrap; }
 .tiptap p { margin: 0 0 8px; }
 .tiptap h2 { font-size: 20px; font-weight: 600; color: ${heading}; margin: 20px 0 8px; }
 .tiptap ul { padding-left: 20px; margin: 0 0 8px; list-style-type: disc; }
