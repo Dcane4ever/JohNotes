@@ -875,13 +875,17 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
         <div
           onMouseDown={e => e.stopPropagation()}
           style={{
-            position: 'fixed', left: slashMenu.x, top: slashMenu.y,
+            position: 'fixed',
+            left: Math.min(slashMenu.x, window.innerWidth - 260),
+            top: Math.min(slashMenu.y, window.innerHeight - 320),
             background: theme.surface1 || toolbarBg, border: `1px solid ${borderColor}`,
             borderRadius: '10px', padding: '4px', zIndex: 9999,
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)', minWidth: '240px',
+            maxHeight: '320px', display: 'flex', flexDirection: 'column',
           }}
         >
-          <p style={{ fontSize: '10px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 4px', margin: 0 }}>Insert block</p>
+          <p style={{ fontSize: '10px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 4px', margin: 0, flexShrink: 0 }}>Insert block</p>
+          <div style={{ overflowY: 'auto', flex: 1 }}>
           {filteredSlash.map((cmd, i) => (
             <div
               key={cmd.label}
@@ -904,6 +908,7 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
               </div>
             </div>
           ))}
+          </div>
         </div>
       )}
 
