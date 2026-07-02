@@ -346,9 +346,13 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
           const { state } = this.editor
           const { from } = state.selection
           const coords = this.editor.view.coordsAtPos(from)
-          const menuHeight = 300
+          const menuHeight = 328
           const spaceBelow = window.innerHeight - coords.bottom
-          const y = spaceBelow < menuHeight ? coords.top - menuHeight - 4 : coords.bottom + 4
+          const spaceAbove = coords.top
+          // Flip above only if below doesn't fit AND above has more room
+          const y = (spaceBelow < menuHeight && spaceAbove > spaceBelow)
+            ? Math.max(8, coords.top - menuHeight - 4)
+            : coords.bottom + 4
           setSlashMenu({ x: coords.left, y, query: '', from })
           setSlashIndex(0)
           return false // let / be inserted
@@ -997,8 +1001,8 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
           onMouseDown={e => e.stopPropagation()}
           style={{
             position: 'fixed',
-            left: Math.min(slashMenu.x, window.innerWidth - 260),
-            top: Math.min(slashMenu.y, window.innerHeight - 320),
+            left: Math.max(8, Math.min(slashMenu.x, window.innerWidth - 260)),
+            top: Math.max(8, Math.min(slashMenu.y, window.innerHeight - 328)),
             background: theme.surface1 || toolbarBg, border: `1px solid ${borderColor}`,
             borderRadius: '10px', padding: '4px', zIndex: 9999,
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)', minWidth: '240px',
