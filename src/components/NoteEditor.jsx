@@ -790,7 +790,8 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
             onKeyDown={e => {
               if (e.key === 'Enter') {
                 const url = linkUrl.trim()
-                if (url) editor.chain().focus().setLink({ href: url.startsWith('http') ? url : `https://${url}` }).run()
+                const safeUrl = url.startsWith('ameno://') ? url : url.startsWith('http') ? url : /^[\w.-]+\.\w{2,}/.test(url) ? `https://${url}` : null
+                if (safeUrl) editor.chain().focus().setLink({ href: safeUrl }).run()
                 setShowLinkInput(false); setLinkUrl('')
               }
               if (e.key === 'Escape') { setShowLinkInput(false); setLinkUrl('') }
@@ -1044,14 +1045,14 @@ export default function NoteEditor({ note, onSave, theme = {}, allNotes = [] }) 
           onClick={e => {
             const a = e.target.closest('a')
             if (!a) return
-            const href = a.getAttribute('href') || ''
+            const href = (a.getAttribute('href') || '').trim()
+            e.preventDefault()
             if (href.startsWith('ameno://note/')) {
-              e.preventDefault()
               document.dispatchEvent(new CustomEvent('ameno-note-link', { detail: href.replace('ameno://note/', '') }))
-            } else if (href.startsWith('http')) {
-              e.preventDefault()
+            } else if (/^https?:\/\//.test(href)) {
               window.open(href, '_blank', 'noopener,noreferrer')
             }
+            // anything else (malformed, iframe strings, etc) — do nothing
           }}
           style={{ flex: 1, padding: '0 16px 120px 32px', position: 'relative', minWidth: 0 }}
         >
